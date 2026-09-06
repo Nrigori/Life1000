@@ -12,9 +12,10 @@
     <artifactId>life1000-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>Life1000</name>
-    <description>Life1000 Phase 0 project skeleton</description>
+    <description>Life1000 backend</description>
     <properties>
         <java.version>21</java.version>
+        <mybatis-plus.version>3.5.16</mybatis-plus.version>
     </properties>
     <dependencies>
         <dependency>
@@ -23,7 +24,24 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-jdbc</artifactId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
         </dependency>
         <dependency>
             <groupId>com.mysql</groupId>

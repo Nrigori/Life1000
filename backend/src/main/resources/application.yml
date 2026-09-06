@@ -6,7 +6,17 @@ spring:
   application:
     name: life1000
   profiles:
-    default: skeleton
+    default: mysql
   sql:
     init:
       mode: never
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+
+life1000:
+  auth:
+    username: ${LIFE1000_USERNAME}
+    password: ${LIFE1000_PASSWORD}
+    jwt-secret: ${LIFE1000_JWT_SECRET}
+    token-ttl-seconds: ${LIFE1000_TOKEN_TTL_SECONDS:7200}
