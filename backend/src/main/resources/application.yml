@@ -1,0 +1,12 @@
+server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: life1000
+  profiles:
+    default: skeleton
+  sql:
+    init:
+      mode: never

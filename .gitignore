@@ -1,0 +1,14 @@
+node_modules/
+dist/
+target/
+.tools/
+.cache/
+.idea/
+*.iml
+*.log
+.env
+.env.*
+!.env.example
+application-local.yml
+uploads/
+!**/.mvn/wrapper/maven-wrapper.properties

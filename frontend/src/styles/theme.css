@@ -1,0 +1,47 @@
+:root {
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  color: #3e342b;
+  background: #f3ebdd;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --paper: #f8f2e7;
+  --muted: #7a6a5b;
+  --accent: #806344;
+  --line: #dcd0bf;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-width: 320px;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%237a6a5b' opacity='.035' filter='url(%23n)' d='M0 0h160v160H0z'/%3E%3C/svg%3E");
+}
+a { color: inherit; text-decoration: none; }
+button { font: inherit; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
+.app-shell { max-width: 1440px; min-height: 100vh; margin: auto; padding: 0 64px; display: flex; flex-direction: column; }
+.site-header { display: flex; justify-content: space-between; align-items: center; gap: 32px; min-height: 104px; border-bottom: 1px solid var(--line); }
+.wordmark, h1, .eyebrow { font-family: Georgia, "Songti SC", "SimSun", serif; }
+.wordmark { font-size: 24px; letter-spacing: .08em; white-space: nowrap; }
+nav { display: flex; flex-wrap: wrap; gap: 30px; color: var(--muted); font-size: 14px; }
+nav a { padding: 10px 0; border-bottom: 1px solid transparent; }
+nav a:hover, nav a.router-link-active { color: var(--accent); border-color: var(--accent); }
+main { flex: 1; padding: 64px 0; }
+.paper { min-height: 420px; padding: 56px; background-color: var(--paper); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 2px 6px #3e342b05; }
+.eyebrow { margin: 0 0 28px; color: var(--muted); font-size: 12px; letter-spacing: .2em; }
+h1 { font-size: 38px; font-weight: 400; margin: 0 0 20px; }
+.placeholder-copy { color: var(--muted); line-height: 1.8; }
+.connection-check { margin-top: 52px; font-size: 14px; }
+button { background: transparent; color: var(--accent); border: 1px solid var(--line); border-radius: 4px; padding: 10px 16px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button:disabled { opacity: .6; cursor: wait; }
+.connection-check p { min-height: 24px; color: var(--muted); }
+footer { padding: 0 0 28px; color: var(--muted); font-size: 12px; }
+@media (max-width: 800px) {
+  .app-shell { padding: 0 24px; }
+  .site-header { align-items: flex-start; flex-direction: column; padding: 24px 0; gap: 16px; }
+  nav { gap: 18px; }
+  main { padding: 32px 0; }
+  .paper { padding: 32px 24px; }
+}
