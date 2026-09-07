@@ -2,7 +2,7 @@
 
 帮助自己记录人生，而不是管理人生。产品规格以 [docs/PRD.md](docs/PRD.md) 为准。
 
-当前完成 **Phase 0 骨架和 Phase 1 数据库 + 后端基础**。前端保持原有占位页面。本阶段不实现附件、完成系统、时间轴、金句、统计和设置等后续业务，也不修改 PRD。
+当前完成 **Phase 0 骨架、Phase 1 后端基础与 Phase 2 人生千事主页面**。本阶段不实现附件、完成系统、时间轴、金句、统计和设置等后续业务，也不修改 PRD。
 
 ## 目录与技术栈
 
@@ -82,7 +82,7 @@ npm ci --cache ../.cache/npm
 npm run dev
 ```
 
-访问 <http://127.0.0.1:5173>。`/login` 仍是占位页，本次不做前端登录交互；使用下面的后端登录接口验收。由于按 PRD 保护了所有 `/api/**`，原首页“检查基础连接”按钮未携带 JWT 时会被返回 401，本阶段不通过放开健康检查来绕过认证。
+访问 <http://127.0.0.1:5173>，点击“人生千事”；未登录时进入最小登录页。登录后即可使用 `/goals`，所有 API 请求携带 JWT，不放开后端认证。
 
 Vite 代理 `/api` 到 `127.0.0.1:8080`。需要更换后端端口时，复制 `frontend/.env.example` 为 `.env.local` 并修改 `API_PROXY_TARGET`，重启 Vite。前端配置中不得放数据库凭据或 JWT 签名密钥。
 
@@ -167,6 +167,59 @@ mvn '-Dmaven.repo.local=../.cache/maven' '-Dtest=MysqlIntegrationTest' test
 - 每个测试使用事务并回滚测试记录；MySQL 自增序列可能前移，Flyway DDL / 版本记录会保留。不会重建或删除已有数据库。
 - `mvn verify` 检测不到 DB_USERNAME 时，3 项 MySQL 集成测试会明确跳过；检测到时会实际运行。辅助脚本缺少凭据会报错，不会把跳过当作成功。
 
-本次环境验收：前端构建通过；后端 `verify` 通过，24 项自动化测试通过、3 项 MySQL 集成测试因未提供给当前进程的数据库凭据而跳过。用户已在本机验证 Phase 0 的数据库连接；**本次 DDL 在真实 MySQL 上执行及完整 CRUD 流程仍待按以上命令本机验收**。
+Phase 1 的真实 MySQL 连接、DDL、CRUD 和约束验收已由用户在本机确认通过。当前会话的 Phase 2 验证结果见下文。
 
 技术参考：[MyBatis-Plus](https://baomidou.com/getting-started/install/)、[Spring Security JWT](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html)。
+
+## Phase 2：人生千事页面
+
+主要实现文件：
+
+- `frontend/src/views/GoalsView.vue`：搜索/筛选栏、卡片/列表切换、加载和错误状态、连续分批渲染。
+- `frontend/src/goals/slots.ts`：固定 001～1000 位置映射。正常浏览补齐空白，筛选时仅展示匹配记录，始终按原始 slotNo 排序。
+- `frontend/src/components/GoalTile.vue`：卡片和列表共用的编号、标题、分类、状态与完成入口。
+- `frontend/src/components/GoalCreateDialog.vue`、`ModalDialog.vue`：轻量新增窗口、焦点约束和 Escape 取消；标题必填，分类/为什么想做可选。
+- `frontend/src/api/goals.ts`、`http.ts`、`session.ts`：复用后端接口，统一携带 JWT，401 时清理令牌并进入登录页。
+- `frontend/src/views/LoginView.vue`：调用既有单用户登录接口的最小登录页，登录成功回到首页。
+- `frontend/src/views/GoalDetailPlaceholderView.vue`：事项标题占位、返回入口、二次确认清空编号；没有完整详情编辑。
+- `frontend/src/styles/goals.css`：PC 五列布局、270px 卡片、简洁列表、固定搜索栏。
+
+进入 `/goals` 默认是卡片视图。未登录先进入 `/login`；使用后端环境变量中配置的 Life1000 账号密码登录，再点击顶部“人生千事”。浏览器只在当前标签页的 sessionStorage 保存访问令牌，不保存密码或签名密钥。
+
+无筛选时通过 `GET /api/goals/range?fromSlot=1&toSlot=1000` 一次读取事项数据，再每批渲染 50 个位置。滚动接近底部时继续渲染，也有“继续向下展开”按钮作为回退，没有分页 UI、虚拟列表库或全局状态库。读取失败时显示错误和重试，不把未知数据误显示为空白。
+
+复用的接口：
+
+- `POST /api/auth/login`
+- `GET /api/categories`
+- `GET /api/goals/range`
+- `GET /api/goals/search`（标题、分类、状态组合筛选）
+- `POST /api/goals/{slotNo}`
+- `GET /api/goals/{slotNo}`
+- `DELETE /api/goals/{slotNo}`
+- 原有基础连接检查继续使用 `GET /api/health`，现在也携带令牌。
+
+**没有新增 API，也没有修改后端业务、DDL 或 PRD。** 新增成功直接更新原位置；清空编号后返回千事页重新读取数据，其他编号不移动。新增遇到 409 冲突时刷新真实记录，不覆盖另一个窗口已创建的事项。搜索采用短暂防抖和请求取消/序号校验，避免旧响应覆盖新筛选。
+
+卡片不显示原因长文、评分等额外字段。无封面显示“✦ 尚无影像”，不请求网络默认图片。卡片与列表的快速完成 `○` 入口明确禁用并提示尚未开放；不会调用完成或状态变更接口。附件、封面接入、完整详情、完成弹窗、完成证明/感想/评分及时间轴联动仍留给后续 Phase。
+
+### Phase 2 验证
+
+```powershell
+cd D:\code\myself\Life1000\frontend
+npm ci --cache ../.cache/npm
+npm run build
+npm run test:e2e
+```
+
+浏览器测试默认使用本机 Edge，无需下载额外浏览器；如仅安装 Chrome，可先设置 `$env:PLAYWRIGHT_CHANNEL = 'chrome'`。测试启动自己的 Vite 服务（5180 端口），完成后关闭。Playwright 是本阶段唯一新增的开发依赖，生产页面没有新增运行时依赖。
+
+本次结果：
+
+- `npm run build`：TypeScript 检查与生产构建通过。
+- `npm run test:e2e`：9 项真实浏览器测试全部通过。覆盖登录、五列布局、完整 001～1000 连续滚动、空白位置、037 创建并原位显示、取消/确认删除后恢复空白、两种视图、标题搜索、分类/三种状态筛选，以及编号保持不变。
+- 额外覆盖空白标题、无结果、请求失败/重试、创建失败保留输入、创建冲突不覆盖、401 重登录、旧搜索响应被忽略及 1366px/窄屏布局。
+- 已查看 1440px 页面截图：卡片约 232 × 270px，主体五列，两行约十个位置；没有网络图片。
+- 后端 `mvn verify`：构建通过，24 项测试通过、3 项真实 MySQL 测试因当前进程没有 DB_USERNAME/DB_PASSWORD 而跳过。Phase 1 的真实 MySQL 验收已由用户确认完成。
+
+**验证边界：**浏览器交互在真实 Edge 中执行，但 API 响应由测试模拟，不写入用户数据库。它验证前端请求和显示行为，不等同于本次重新完成浏览器到真实 MySQL 的端到端验收。本机启动真实后端后，可按同样步骤在空白编号创建、筛选、进入占位页并确认清空。

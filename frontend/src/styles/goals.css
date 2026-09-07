@@ -1,0 +1,84 @@
+/* Phase 2: a continuous, numbered collection. */
+.goals-main { padding: 28px 0 40px; }
+.goals-page { max-width: 1240px; margin: 0 auto; }
+.goals-heading { display: flex; align-items: baseline; gap: 28px; padding-bottom: 10px; }
+.goals-heading h1 { margin: 0; font-size: 32px; }
+.goals-heading p { color: var(--muted); font-size: 13px; letter-spacing: .06em; }
+.goals-heading p span { margin-left: 10px; letter-spacing: .02em; }
+.goals-toolbar { display: flex; gap: 16px; align-items: center; position: sticky; top: 0; z-index: 3; background: #f3ebdd; padding: 14px 0 18px; border-bottom: 1px solid var(--line); margin-bottom: 24px; }
+.search-field { display: flex; align-items: center; gap: 10px; flex: 1; border-bottom: 1px solid #bfae98; }
+.search-field > span[aria-hidden] { color: var(--muted); font-size: 26px; }
+.search-field input { border: 0; background: transparent; padding-left: 0; }
+.filter-field select { width: 152px; background-color: var(--paper); }
+.view-toggle { display: flex; align-items: center; gap: 4px; margin-left: 12px; white-space: nowrap; color: var(--line); }
+.view-toggle button { padding: 8px 10px; border: 0; border-radius: 0; color: var(--muted); }
+.view-toggle button[aria-pressed="true"] { color: #3e342b; box-shadow: inset 0 -1px var(--accent); }
+.goals-content { min-height: 420px; }
+.goals-collection { padding: 0; margin: 0; list-style: none; }
+.goals-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; }
+.goal-tile { position: relative; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); overflow: hidden; }
+.goal-tile:hover { border-color: #bdaa90; box-shadow: 0 2px 5px #3e342b06; }
+.goal-card { height: 270px; }
+.goal-open { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 122px 1fr 38px; }
+.slot-number { position: absolute; z-index: 1; top: 12px; left: 16px; font-family: Georgia, "SimSun", serif; font-size: 20px; letter-spacing: .06em; color: #675542; }
+.cover-empty { grid-column: 1 / -1; background: #eee5d6; color: #897963; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; font-size: 11px; border-bottom: 1px solid #e6dac7; }
+.cover-symbol { font-size: 25px; color: #b0a087; font-weight: 400; }
+.goal-title { grid-column: 1 / -1; margin: 16px 16px 8px; font-size: 16px; font-weight: 400; line-height: 1.65; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; align-self: start; }
+.goal-category { margin: 0 6px 16px 16px; min-width: 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: end; }
+.goal-status { color: var(--muted); font-size: 12px; margin: 0 42px 16px 0; white-space: nowrap; align-self: end; }
+.goal-status.is-completed { color: #776340; }
+.complete-entry { position: absolute; right: 10px; bottom: 9px; width: 28px; height: 32px; line-height: 28px; font-size: 26px; padding: 0; border: 0; }
+.complete-entry:disabled { cursor: default; opacity: .6; }
+.blank-tile { background: #f6efE3; }
+.blank-open { color: var(--muted); display: flex; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 0; border-radius: 4px; padding: 24px; }
+.blank-plus { font-size: 32px; font-weight: 200; color: #b5a58e; }
+.blank-caption { font-size: 13px; }
+.goal-open:focus-visible, .blank-open:focus-visible { outline-offset: -4px; }
+.goals-list { display: flex; flex-direction: column; gap: 10px; }
+.goal-row { min-height: 76px; }
+.goal-row .goal-open, .goal-row .blank-open { display: grid; grid-template-columns: 76px minmax(0, 1fr) 160px 100px 30px; grid-template-rows: auto; align-items: center; gap: 18px; padding: 16px 22px; min-height: 76px; }
+.goal-row .slot-number { position: static; font-size: 20px; grid-column: 1; }
+.goal-row .goal-title { grid-column: 2; margin: 0; align-self: center; -webkit-line-clamp: 1; }
+.goal-row .goal-category { grid-column: 3; margin: 0; align-self: center; }
+.goal-row .goal-status { grid-column: 4; margin: 0; align-self: center; }
+.goal-row .complete-entry { right: 22px; top: 50%; bottom: auto; transform: translateY(-50%); }
+.goal-row .blank-plus { display: none; }
+.goal-row .blank-caption { grid-column: 2; text-align: left; }
+.filter-summary { display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+.filter-summary button { border: 0; padding: 4px 0; text-decoration: underline; text-underline-offset: 4px; font-size: 12px; }
+.page-message { padding: 60px 20px; text-align: center; color: var(--muted); line-height: 1.8; }
+.scroll-sentinel { padding: 32px 0; text-align: center; }
+.scroll-sentinel button { font-size: 12px; color: var(--muted); }
+.collection-end { text-align: center; color: var(--muted); padding: 32px 0 16px; font-size: 12px; letter-spacing: .08em; }
+@media (max-width: 1199px) {
+  .goals-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .filter-field select { width: 128px; }
+}
+@media (max-width: 960px) {
+  .goals-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .goals-heading { flex-direction: column; gap: 0; }
+  .goals-toolbar { flex-wrap: wrap; gap: 12px; }
+  .search-field { min-width: 200px; }
+  .view-toggle { margin-left: auto; }
+  .goal-row .goal-open, .goal-row .blank-open { grid-template-columns: 52px minmax(0, 1fr) 100px 70px 28px; gap: 10px; padding: 16px; }
+}
+@media (max-width: 650px) {
+  .goals-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .search-field { flex-basis: 100%; }
+  .filter-field select { width: 112px; }
+  .goals-heading p span { margin-left: 0; }
+  .goal-card { height: 260px; }
+  .goal-open { grid-template-rows: 116px 1fr 38px; }
+  .goal-title { font-size: 14px; margin: 12px; }
+  .goal-category { margin-left: 12px; }
+  .goal-status { margin-right: 32px; }
+  .complete-entry { right: 4px; }
+  .goal-row .goal-open, .goal-row .blank-open { grid-template-columns: 46px minmax(0, 1fr) 34px; }
+  .goal-row .goal-title { grid-column: 2; grid-row: 1; }
+  .goal-row .goal-category { grid-column: 2; grid-row: 2; }
+  .goal-row .goal-status { grid-column: 2; grid-row: 3; }
+  .goal-row .complete-entry { right: 16px; }
+}
+@media (max-width: 390px) {
+  .goals-grid { grid-template-columns: 1fr; }
+}
