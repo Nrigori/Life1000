@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { request, errorMessage } from '../api/http'
+import { safeReturnPath } from '../router'
 import { saveToken } from '../api/session'
 
 const router = useRouter()
+const route = useRoute()
 const username = ref('')
 const password = ref('')
 const busy = ref(false)
@@ -20,7 +22,7 @@ async function login() {
     })
     saveToken(result.accessToken)
     password.value = ''
-    await router.replace('/')
+    await router.replace(safeReturnPath(route.query.redirect))
   } catch (cause) {
     error.value = errorMessage(cause)
   } finally {

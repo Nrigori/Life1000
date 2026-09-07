@@ -6,7 +6,8 @@ const route = useRoute()
 </script>
 
 <template>
-  <div class="app-shell">
+  <RouterView v-if="route.path === '/'" />
+  <div v-else class="app-shell">
     <header class="site-header">
       <RouterLink class="wordmark" to="/" aria-label="Life1000 首页">LIFE / 1000</RouterLink>
       <nav aria-label="主导航">

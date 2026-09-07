@@ -296,3 +296,17 @@ Windows 启动、mysql 测试命令及完整人工验收步骤见 [Phase 3 验�
 验证：前端构建通过，15 项模拟 API 的 Edge 浏览器测试通过；后端构建通过，47 项测试通过、5 项真实 MySQL 测试因本进程没有凭据跳过。已新增真实 MySQL 完成闭环与磁盘回滚测试，未声称本次完成真实浏览器到数据库的链路验收。
 
 Windows 命令、测试分类、数据一致性说明及人工验收清单见 [Phase 4 验证文档](docs/PHASE4-VALIDATION.md)。Phase 5 / Phase 6 尚未实现。
+
+## Phase 5：首页、金句收藏与统计
+
+首页 / 现在是独立的一屏个人封面：背景摄影、随机金句、本地日期、LIFE / 1000、已完成 / 已写下与年度时间细线。无候选时保留暖米白纸张，不联网取图。五个一级入口通往既有功能及新增 /quotes、/stats；设置仍是 Phase 6 占位页。
+
+背景默认从 is_image=true 且 allow_home_background=true 的所有阶段附件中随机选择。实际文件继续使用原 JWT content 接口与 Blob URL；离开或替换时释放 URL，不公开 uploads，不把 JWT 放进 URL。兼容 app_setting 的 HOME_BACKGROUND_MODE=FIXED 和 HOME_FIXED_BACKGROUND_PATH（必须匹配有效图片附件 file_path），没有新增设置 UI 或写入 API。随机背景和金句仅在进入首页时重选，不轮播或记忆上次结果。
+
+金句支持内容/来源搜索、收藏/编辑、参与首页随机开关及二次确认删除。GET /api/quotes/random 只选 include_home=true，无候选返回 204。新增 GET/POST /api/quotes、PUT/DELETE /api/quotes/{id}、GET /api/home/background、GET /api/stats；继承既有认证。统计为一次 SQL 查询，包含已写下、完成、进行中、空白、今年完成、图片/文档及金句数量，没有图表或冗余统计表。
+
+主要实现为 HomeView.vue、QuotesView.vue、StatsView.vue、api/home.ts、home/calendar.ts，以及后端 HomeService/Controller、QuoteService/Controller 和 LifeGoalMapper 统计查询。无新依赖、无数据库变更、无 PRD 修改。
+
+验证：前端构建通过；22 项前端测试通过（21 项模拟 API 浏览器测试与 1 项日历函数测试）；后端构建成功，58 项通过、6 项真实 MySQL 测试因当前进程缺少凭据 skipped。新增测试类使用 mysql profile，可在本机专用测试库运行。不能将这些模拟测试视为真实 Phase 5 链路验收。
+
+完整口径、Windows 命令及人工验收见 [Phase 5 验证文档](docs/PHASE5-VALIDATION.md)。完成 Phase 5 后停止；设置、分类管理 UI、固定背景上传 UI、备份恢复、一键启动和部署均未实现。
