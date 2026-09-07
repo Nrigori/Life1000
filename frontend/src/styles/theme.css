@@ -69,3 +69,18 @@ input::placeholder { color: #8d7d6b; }
 .back-link { display: inline-block; color: var(--muted); margin-bottom: 40px; font-size: 14px; }
 .detail-placeholder h1 { overflow-wrap: anywhere; }
 .clear-slot-button { margin-top: 36px; font-size: 13px; color: var(--muted); }
+
+/* V1 finishing: shared interaction states without changing the accepted page layouts. */
+a, summary, input[type=checkbox], input[type=radio], select { cursor: pointer; }
+input:disabled, select:disabled, textarea:disabled { cursor: not-allowed; }
+.app-shell [role=alert] { color: #924d37; line-height: 1.7; overflow-wrap: anywhere; }
+.paper-dialog { overflow-wrap: anywhere; }
+.paper-dialog h2 { line-height: 1.45; }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+button, a { transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+.app-shell main > * { animation: page-appear 140ms ease-out; }
+@keyframes page-appear { from { opacity: .7; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  button, a { transition: none; }
+  .app-shell main > * { animation: none; }
+}

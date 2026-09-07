@@ -15,12 +15,19 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    private static final org.slf4j.Logger log=org.slf4j.LoggerFactory.getLogger(ApiExceptionHandler.class);
+    @ExceptionHandler(Exception.class)
+    ResponseEntity<Map<String,String>> unexpected(Exception exception) {
+        log.error("Request failed",exception);
+        return ResponseEntity.status(500).body(Map.of("code","INTERNAL_ERROR","message","操作暂时无法完成，请稍后重试。"));
+    }
     @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
     ResponseEntity<Map<String, String>> tooLarge(Exception exception) {
         return ResponseEntity.status(413).body(Map.of("code", "FILE_TOO_LARGE", "message", "文件不能超过 50 MB"));
     }
     @ExceptionHandler(java.io.IOException.class)
     ResponseEntity<Map<String, String>> fileError(Exception exception) {
+        log.warn("File request failed",exception);
         return ResponseEntity.status(503).body(Map.of("code", "FILE_UNAVAILABLE", "message", "文件暂时不可读写，请检查上传目录权限后重试"));
     }
     @ExceptionHandler(ApiException.class)
@@ -46,6 +53,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(DataAccessException.class)
     ResponseEntity<Map<String, String>> databaseUnavailable(DataAccessException exception) {
+        log.warn("Database request failed",exception);
         return ResponseEntity.status(503)
                 .body(Map.of("code", "DATABASE_UNAVAILABLE", "message", "数据库暂时不可用"));
     }

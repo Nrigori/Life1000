@@ -310,3 +310,19 @@ Windows 命令、测试分类、数据一致性说明及人工验收清单见 [P
 验证：前端构建通过；22 项前端测试通过（21 项模拟 API 浏览器测试与 1 项日历函数测试）；后端构建成功，58 项通过、6 项真实 MySQL 测试因当前进程缺少凭据 skipped。新增测试类使用 mysql profile，可在本机专用测试库运行。不能将这些模拟测试视为真实 Phase 5 链路验收。
 
 完整口径、Windows 命令及人工验收见 [Phase 5 验证文档](docs/PHASE5-VALIDATION.md)。完成 Phase 5 后停止；设置、分类管理 UI、固定背景上传 UI、备份恢复、一键启动和部署均未实现。
+
+## Phase 6：设置、完整备份与 V1 UI 收尾
+
+/settings 已替换占位页，只有首页、分类、数据、文件四区。支持 RANDOM / FIXED 持久化切换，从已有图片选固定背景，集中管理所有阶段图片的随机候选；继续 JWT fetch + Blob，不公开 uploads。固定图删除时，原附件清理事务同步清除设置引用，首页安全回到纸张。
+
+分类管理复用原 Category API，直接编辑排序数字，按 sort_order、id 排序；删除前确认，原事项保留并变为“不分类”。文件区域按附件元数据求图片/文档数量与 file_size 总和，不扫描磁盘。
+
+新增 GET /api/settings、PUT /api/settings、GET /api/settings/images、GET /api/backup/export。设置仅允许 HOME_BACKGROUND_MODE / HOME_FIXED_BACKGROUND_PATH；固定路径必须对应有效图片。没有新增数据库表或迁移。
+
+完整备份为 Life1000_Backup_YYYY-MM-DD.zip，包含 life1000.json、images/、documents/、backup-info.json。JSON 保留八张业务表和附件导出映射；app_setting 仅导出 V1 两项业务键，环境秘密从未读取。文件名包含原编号和附件 ID，同名不覆盖；缺失文件列入说明。数据库事务和附件共享锁保护生成期间的一致性，安全临时 ZIP 在下载完成、失败或回滚后清理。
+
+UI 收尾保留已验收结构，统一“不分类”、焦点/Hover、错误提示、轻量页面出现效果和图片失败占位；原有删除及撤销确认沿用既有弹窗。未新增业务功能、依赖或基础设施。
+
+验证：前端构建成功，27 项前端测试通过；后端构建成功，67 项通过、8 项真实 MySQL 测试因当前进程没有凭据 skipped。新增 Phase 6 两项真实 MySQL 测试，其中一项验证实际提交后的设置持久化。模拟测试不代表真实链路验收。
+
+Windows 启动、专用测试库命令、ZIP 检查和全页面验收清单见 [Phase 6 验证文档](docs/PHASE6-VALIDATION.md)。V1 功能开发在 Phase 6 停止；导入恢复、一键启动、Docker、Nginx 与部署均未实现。

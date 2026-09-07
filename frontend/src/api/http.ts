@@ -15,8 +15,8 @@ export async function fetchApi(path: string, options: RequestInit = {}): Promise
     ...options,
     headers,
     signal: options.signal
-      ? AbortSignal.any([options.signal, AbortSignal.timeout(options.body instanceof FormData ? 120000 : 15000)])
-      : AbortSignal.timeout(options.body instanceof FormData ? 120000 : 15000),
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(path === '/backup/export' ? 600000 : options.body instanceof FormData ? 120000 : 15000)])
+      : AbortSignal.timeout(path === '/backup/export' ? 600000 : options.body instanceof FormData ? 120000 : 15000),
   })
   if (!response.ok) {
     if (response.status === 401 && path !== '/auth/login') {
@@ -24,7 +24,8 @@ export async function fetchApi(path: string, options: RequestInit = {}): Promise
       window.dispatchEvent(new Event('life1000:unauthorized'))
     }
     const body = await response.json().catch(() => null) as { message?: string } | null
-    throw new ApiError(response.status, body?.message || '暂时无法读取，请稍后再试。')
+    const message = typeof body?.message === 'string' ? body.message : ''
+    throw new ApiError(response.status, !message || /SQLException|AxiosError|NullPointerException|StackTrace/.test(message) ? '暂时无法读取，请稍后再试。' : message)
   }
   return response
 }

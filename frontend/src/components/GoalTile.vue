@@ -20,7 +20,7 @@ const emit = defineEmits<{ create: [slotNo: number]; complete: [goal: LifeGoal] 
         <span class="slot-number">{{ formatSlot(slotNo) }}</span>
         <GoalCover v-if="view === 'cards'" :slot="slotNo" />
         <h2 class="goal-title" :title="goal.title">{{ goal.title }}</h2>
-        <span class="goal-category">{{ categoryName || '未分类' }}</span>
+        <span class="goal-category">{{ categoryName || '不分类' }}</span>
         <span class="goal-status" :class="{ 'is-completed': goal.status === 'COMPLETED' }">{{ goal.status === 'COMPLETED' && goal.completedDate ? goal.completedDate.replaceAll('-', '.') : statusLabels[goal.status] }}</span>
       </RouterLink>
       <button class="complete-entry" type="button" :disabled="goal.status === 'COMPLETED'" @click="emit('complete', goal)"

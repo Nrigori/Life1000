@@ -32,7 +32,7 @@ class GoalDetailServiceTest {
         for(var type: new Class<?>[]{LifeGoal.class,GoalCheckItem.class,GoalRecord.class,GoalAttachment.class})
             TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(),""),type);
         files=new LocalFiles(directory.toString());
-        cleanup=new AttachmentCleanup(files,attachments);
+        cleanup=new AttachmentCleanup(files,attachments,mock(AppSettingMapper.class));
         service=new GoalDetailService(goals,checks,records,attachments,files,cleanup);
         var goal=new LifeGoal(); goal.setId(10L); goal.setSlotNo(27);
         when(goals.selectOne(any())).thenReturn(goal);
@@ -105,7 +105,7 @@ class GoalDetailServiceTest {
         assertThat(files.resolve(path)).exists();
         files.queue(path);
         when(attachments.selectCount(any())).thenReturn(0L);
-        new AttachmentCleanup(new LocalFiles(directory.toString()),attachments).retry();
+        new AttachmentCleanup(new LocalFiles(directory.toString()),attachments,mock(AppSettingMapper.class)).retry();
         assertThat(files.resolve(path)).doesNotExist();
         assertThat(files.pending()).isEmpty();
     }
@@ -128,12 +128,12 @@ class GoalDetailServiceTest {
         cleanup.retry();
         assertThat(files.resolve(orphan)).exists(); // Active upload cannot be swept.
         var restartedFiles=new LocalFiles(directory.toString());
-        new AttachmentCleanup(restartedFiles,attachments).retry();
+        new AttachmentCleanup(restartedFiles,attachments,mock(AppSettingMapper.class)).retry();
         assertThat(files.resolve(orphan)).doesNotExist();
 
         String committed=restartedFiles.save(27,new MockMultipartFile("file","saved.txt","text/plain",new byte[]{2}));
         when(attachments.selectCount(any())).thenReturn(1L);
-        new AttachmentCleanup(new LocalFiles(directory.toString()),attachments).retry();
+        new AttachmentCleanup(new LocalFiles(directory.toString()),attachments,mock(AppSettingMapper.class)).retry();
         assertThat(restartedFiles.resolve(committed)).exists();
         assertThat(restartedFiles.pending()).isEmpty();
     }

@@ -29,4 +29,4 @@ export async function downloadFile(value: Attachment) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 export const fileSize = (size: number) => size < 1024 ? size + ' B' : size < 1048576
-  ? (size / 1024).toFixed(1) + ' KB' : (size / 1048576).toFixed(1) + ' MB'
+  ? (size / 1024).toFixed(1) + ' KB' : size < 1073741824 ? (size / 1048576).toFixed(1) + ' MB' : (size / 1073741824).toFixed(2) + ' GB'

@@ -20,10 +20,12 @@ public class AttachmentCleanup {
     private static final Logger log = LoggerFactory.getLogger(AttachmentCleanup.class);
     private final LocalFiles files;
     private final GoalAttachmentMapper attachments;
-    public AttachmentCleanup(LocalFiles files, GoalAttachmentMapper attachments) {
-        this.files = files; this.attachments = attachments;
+    private final com.life1000.mapper.AppSettingMapper settings;
+    public AttachmentCleanup(LocalFiles files, GoalAttachmentMapper attachments, com.life1000.mapper.AppSettingMapper settings) {
+        this.files = files; this.attachments = attachments; this.settings = settings;
     }
     public void prepare(List<GoalAttachment> values) throws IOException {
+        for (var value : values) settings.clearFixed(value.getFilePath());
         var markers = new ArrayList<Path>();
         try {
             for (var attachment : values) markers.add(files.queue(attachment.getFilePath()));

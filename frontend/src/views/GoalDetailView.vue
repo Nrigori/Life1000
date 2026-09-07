@@ -45,7 +45,7 @@ const form = reactive({ title: '', categoryId: '', status: 'NOT_STARTED', reason
 const checkForm = ref<{ id?: number; content: string; completed: boolean }>()
 const recordForm = ref<{ id?: number; content: string; recordDate: string }>()
 const confirmation = ref<{ title: string; message: string; action: () => Promise<void> }>()
-const categoryName = computed(() => categories.value.find(c => c.id === goal.value?.categoryId)?.name || '未分类')
+const categoryName = computed(() => categories.value.find(c => c.id === goal.value?.categoryId)?.name || '不分类')
 let revision = 0
 async function load() {
   const current = ++revision
@@ -201,7 +201,7 @@ watch(() => route.params.slotNo, load, { immediate: true })
         <h2>编辑这一件事</h2>
         <label>标题<input v-model="form.title" required maxlength="255" autofocus /></label>
         <div class="edit-columns">
-          <label>分类<select v-model="form.categoryId" aria-label="分类"><option value="">未分类</option><option v-for="c in categories" :key="c.id" :value="String(c.id)">{{ c.name }}</option></select></label>
+          <label>分类<select v-model="form.categoryId" aria-label="分类"><option value="">不分类</option><option v-for="c in categories" :key="c.id" :value="String(c.id)">{{ c.name }}</option></select></label>
           <label v-if="goal.status !== 'COMPLETED'">状态<select v-model="form.status" aria-label="状态"><option value="NOT_STARTED">未开始</option><option value="IN_PROGRESS">进行中</option></select></label>
           <p v-else>已完成</p>
         </div>

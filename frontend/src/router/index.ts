@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import PlaceholderView from '../views/PlaceholderView.vue'
+
 import { getToken } from '../api/session'
 
 export const navigation = [
@@ -15,9 +15,7 @@ export const router = createRouter({
   routes: [
     { path: '/', component: () => import('../views/HomeView.vue'), meta: { title: '首页', requiresAuth: true } },
     { path: '/goals', component: () => import('../views/GoalsView.vue'), meta: { title: '人生千事', requiresAuth: true } },
-    ...navigation.filter(item => item.path === '/settings').map(({ path, title }) => ({
-      path, component: PlaceholderView, meta: { title },
-    })),
+    { path: '/settings', component: () => import('../views/SettingsView.vue'), meta: { title: '设置', requiresAuth: true } },
     { path: '/goals/:slotNo', component: () => import('../views/GoalDetailView.vue'), meta: { title: '事项详情', requiresAuth: true } },
     { path: '/timeline', component: () => import('../views/TimelineView.vue'), meta: { title: '时间轴', requiresAuth: true } },
     { path: '/quotes', component: () => import('../views/QuotesView.vue'), meta: { title: '金句收藏', requiresAuth: true } },

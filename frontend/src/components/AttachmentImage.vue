@@ -22,6 +22,6 @@ watch(() => props.id, async id => {
 onBeforeUnmount(clear)
 </script>
 <template>
-  <img v-if="url" :src="url" :alt="alt" loading="lazy" />
+  <img v-if="url && !failed" :src="url" :alt="alt" loading="lazy" @error="failed = true" />
   <span v-else role="status">{{ failed ? '影像暂时无法读取' : '正在展开影像…' }}</span>
 </template>

@@ -13,6 +13,8 @@ async function mock(page:Page, photo=false, empty=false, authenticated=true) {
     calls.push(method+' '+path)
     if(path==='/api/auth/login') { await route.fulfill({json:{accessToken:'phase5-token'}}); return }
     expect(req.headers().authorization).toBe('Bearer phase5-token')
+    if(path==='/api/settings') {await route.fulfill({json:{mode:'RANDOM',fixedPath:null,fixedImage:null,files:{imageCount:0,documentCount:0,totalBytes:0}}});return}
+    if(path==='/api/settings/images'){await route.fulfill({json:[]});return}
     if(path==='/api/stats') {await route.fulfill({json:stats});return}
     if(path==='/api/home/background') {await route.fulfill(photo?{json:{id:77,originalName:'测试图片.png'}}:{status:204});return}
     if(path==='/api/attachments/77/content') {expect(url.searchParams.has('token')).toBeFalsy();await route.fulfill({body:png,contentType:'image/png'});return}
