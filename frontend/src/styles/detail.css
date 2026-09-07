@@ -46,3 +46,6 @@
   .goal-detail { padding: 18px; } .detail-heading { margin-top: 28px; } .detail-banner { height: 210px; }
   .edit-columns, .attachment-grid { grid-template-columns: 1fr; } .check-list li { align-items: flex-start; }
 }
+
+.completion-entry { text-align: center; padding-top: 34px; }
+.archive-rating { color: #947449; letter-spacing: .2em; }

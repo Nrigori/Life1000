@@ -267,3 +267,32 @@ npm run test:e2e
 本阶段验证：前端构建通过；12 项浏览器测试通过；后端构建通过，32 项测试通过，4 项真实 MySQL 测试因本进程缺少 DB_USERNAME / DB_PASSWORD 跳过。浏览器测试模拟 API，后端文件测试使用真实临时目录；不代表已完成本阶段真实链路验收。
 
 Windows 启动、mysql 测试命令及完整人工验收步骤见 [Phase 3 验证文档](docs/PHASE3-VALIDATION.md)。Phase 4 完成系统及其后续功能均未实现；首页背景本阶段仅保存附件候选标记。
+
+## Phase 4：完成系统与时间轴
+
+已接通人生千事卡片/列表和详情页的完成入口。两个入口共用 `CompletionDialog.vue`：完成日期必填且默认当天，感想、1～5 星评分和证明附件可空。文件只在确认时上传，取消不写入数据。完成后显示约 4 秒的“第027件，已经成为回忆。”反馈。
+
+完成档案继续使用既有 `goal_completion`。完成时锁定事项，在同一事务内保存档案、COMPLETED 状态及 COMPLETION 附件；附件继续调用 Phase 3 上传与文件清理代码。撤销仅恢复完成前状态并保留档案/文件，再次完成更新原档案。已完成事项可以继续记录、编辑文字和完成档案、补充或删除证明。
+
+新增/扩展接口：
+
+| API | 行为 |
+| --- | --- |
+| POST /api/goals/{slotNo}/complete | 完成；JSON 或 multipart，重复完成返回 409 |
+| GET /api/goals/{slotNo}/completion | 读取包括撤销后保留的档案；没有返回 204 |
+| PUT /api/goals/{slotNo}/completion | 修改已完成档案，可同时补充证明 |
+| POST /api/goals/{slotNo}/uncomplete | 恢复完成前状态，不删除档案和证明 |
+| GET /api/timeline | 年份摘要：year、count |
+| GET /api/timeline/{year} | completedDate、slotNo、title 和 year |
+| 现有附件接口 | 支持 COMPLETION，record_id=NULL；须通过正式完成流程后上传新证明 |
+| 现有事项查询 | 增加只读 completedDate，用于已完成卡片；不新增数据库列 |
+
+完成 JSON 字段为 `completedDate`、`completionNote`、`rating`。multipart 使用 application/json 类型的 `completion` 部分及多个 `files` 部分；本次证明总量最多 50 MB，可完成后分次补充。
+
+`/timeline` 按年份降序显示年度卡片，默认展开当前年，展开后只显示日期、原编号和标题。查询直接 JOIN 当前完成档案与 status=COMPLETED 的事项；年内按日期、编号升序，无冗余时间轴表。日期修改、撤销和删除会自然改变后续查询结果。
+
+主要文件：后端 `CompletionService/Controller`、`TimelineService/Controller`、`GoalCompletionMapper`；前端 `api/completion.ts`、`CompletionDialog.vue`、`CompletionFeedback.vue`、`TimelineView.vue`，以及既有详情/卡片/列表的接入修改。数据库 DDL、PRD、存储目录和依赖均未改变。
+
+验证：前端构建通过，15 项模拟 API 的 Edge 浏览器测试通过；后端构建通过，47 项测试通过、5 项真实 MySQL 测试因本进程没有凭据跳过。已新增真实 MySQL 完成闭环与磁盘回滚测试，未声称本次完成真实浏览器到数据库的链路验收。
+
+Windows 命令、测试分类、数据一致性说明及人工验收清单见 [Phase 4 验证文档](docs/PHASE4-VALIDATION.md)。Phase 5 / Phase 6 尚未实现。

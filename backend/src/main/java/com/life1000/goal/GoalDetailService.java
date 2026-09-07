@@ -80,17 +80,18 @@ public class GoalDetailService {
     }
     public List<GoalAttachment> attachments(int slot) {
         return attachments.selectList(new LambdaQueryWrapper<GoalAttachment>().eq(GoalAttachment::getGoalId,goal(slot).getId())
-                .in(GoalAttachment::getStage,"GENERAL","PROCESS").orderByAsc(GoalAttachment::getCreatedAt,GoalAttachment::getId));
+                .in(GoalAttachment::getStage,"GENERAL","PROCESS","COMPLETION").orderByAsc(GoalAttachment::getCreatedAt,GoalAttachment::getId));
     }
     public GoalAttachment attachment(long id) {
         var value=attachments.selectById(id);
-        if(value==null || !Set.of("GENERAL","PROCESS").contains(value.getStage())) throw ApiException.notFound("附件不存在");
+        if(value==null || !Set.of("GENERAL","PROCESS","COMPLETION").contains(value.getStage())) throw ApiException.notFound("附件不存在");
         return value;
     }
     public GoalAttachment upload(int slot, Long recordId, String stage, MultipartFile file) throws IOException {
         var parent=goal(slot);
-        if (!Set.of("GENERAL","PROCESS").contains(stage) || ("PROCESS".equals(stage) != (recordId != null)))
+        if (!Set.of("GENERAL","PROCESS","COMPLETION").contains(stage) || ("PROCESS".equals(stage) != (recordId != null)))
             throw ApiException.badRequest("附件阶段与过程记录不匹配");
+        if ("COMPLETION".equals(stage) && parent.getStatus() != GoalStatus.COMPLETED) throw ApiException.badRequest("请先通过完成流程保存档案");
         if(recordId!=null && !record(recordId).getGoalId().equals(parent.getId()))
             throw ApiException.badRequest("过程记录不属于当前事项");
         if(file.isEmpty()) throw ApiException.badRequest("不能上传空文件");
@@ -142,7 +143,7 @@ public class GoalDetailService {
             if(selected!=null && selected.getGoalId().equals(parent.getId()) && Boolean.TRUE.equals(selected.getIsImage())) return selected;
         }
         return attachments.selectOne(new LambdaQueryWrapper<GoalAttachment>().eq(GoalAttachment::getGoalId,parent.getId())
-                .eq(GoalAttachment::getIsImage,true).in(GoalAttachment::getStage,"GENERAL","PROCESS")
+                .eq(GoalAttachment::getIsImage,true).in(GoalAttachment::getStage,"GENERAL","PROCESS","COMPLETION")
                 .orderByDesc(GoalAttachment::getCreatedAt,GoalAttachment::getId).last("LIMIT 1"));
     }
     public void setCover(int slot,long id) {

@@ -17,6 +17,10 @@ public class LifeGoal {
     private Long coverAttachmentId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private java.time.LocalDate completedDate;
+    public java.time.LocalDate getCompletedDate() { return completedDate; }
+    public void setCompletedDate(java.time.LocalDate value) { completedDate = value; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

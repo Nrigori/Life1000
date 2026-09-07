@@ -20,12 +20,13 @@ public class LifeGoalService {
     private final CategoryMapper categories;
     private final com.life1000.mapper.GoalAttachmentMapper attachments;
     private final AttachmentCleanup cleanup;
+    private final com.life1000.mapper.GoalCompletionMapper completions;
 
-    public LifeGoalService(LifeGoalMapper mapper, CategoryMapper categories, com.life1000.mapper.GoalAttachmentMapper attachments, AttachmentCleanup cleanup) {
+    public LifeGoalService(LifeGoalMapper mapper, CategoryMapper categories, com.life1000.mapper.GoalAttachmentMapper attachments, AttachmentCleanup cleanup, com.life1000.mapper.GoalCompletionMapper completions) {
         this.mapper = mapper;
         this.categories = categories;
         this.attachments = attachments;
-        this.cleanup = cleanup;
+        this.cleanup = cleanup; this.completions = completions;
     }
 
     public static void validateSlot(int slotNo) {
@@ -36,6 +37,7 @@ public class LifeGoalService {
         validateSlot(slotNo);
         LifeGoal goal = mapper.selectOne(new LambdaQueryWrapper<LifeGoal>().eq(LifeGoal::getSlotNo, slotNo));
         if (goal == null) throw ApiException.notFound("该编号尚未写下");
+        withDates(List.of(goal));
         return goal;
     }
 
@@ -43,21 +45,38 @@ public class LifeGoalService {
         validateSlot(fromSlot);
         validateSlot(toSlot);
         if (fromSlot > toSlot) throw ApiException.badRequest("起始编号不能大于结束编号");
-        return mapper.selectList(new LambdaQueryWrapper<LifeGoal>()
-                .between(LifeGoal::getSlotNo, fromSlot, toSlot).orderByAsc(LifeGoal::getSlotNo));
+        return withDates(mapper.selectList(new LambdaQueryWrapper<LifeGoal>()
+                .between(LifeGoal::getSlotNo, fromSlot, toSlot).orderByAsc(LifeGoal::getSlotNo)));
     }
 
     public List<LifeGoal> search(String keyword, Long categoryId, GoalStatus status) {
         String term = keyword == null ? "" : keyword.strip();
         // Escape SQL LIKE metacharacters so a literal % or _ searches literally.
         term = term.replace("!", "!!").replace("%", "!%").replace("_", "!_");
-        return mapper.selectList(new LambdaQueryWrapper<LifeGoal>()
+        return withDates(mapper.selectList(new LambdaQueryWrapper<LifeGoal>()
                 .apply(!term.isEmpty(), "title LIKE {0} ESCAPE '!'", "%" + term + "%")
                 .eq(categoryId != null, LifeGoal::getCategoryId, categoryId)
                 .eq(status != null, LifeGoal::getStatus, status)
-                .orderByAsc(LifeGoal::getSlotNo));
+                .orderByAsc(LifeGoal::getSlotNo)));
     }
 
+    private List<LifeGoal> withDates(List<LifeGoal> values) {
+        var ids = values.stream().filter(value -> value.getStatus() == GoalStatus.COMPLETED).map(LifeGoal::getId).toList();
+        if (!ids.isEmpty()) {
+            var dates = completions.selectList(new LambdaQueryWrapper<com.life1000.entity.GoalCompletion>()
+                    .in(com.life1000.entity.GoalCompletion::getGoalId, ids));
+            for (var value : values) if (value.getStatus() == GoalStatus.COMPLETED)
+                dates.stream().filter(date -> date.getGoalId().equals(value.getId())).findFirst()
+                        .ifPresent(date -> value.setCompletedDate(date.getCompletedDate()));
+        }
+        return values;
+    }
+    private LifeGoal lockedGoal(int slotNo) {
+        validateSlot(slotNo);
+        var value = mapper.selectOne(new LambdaQueryWrapper<LifeGoal>().eq(LifeGoal::getSlotNo, slotNo).last("FOR UPDATE"));
+        if (value == null) throw ApiException.notFound("该编号尚未写下");
+        return value;
+    }
     private void validateCategory(Long id) {
         if (id != null && categories.selectById(id) == null) {
             throw ApiException.badRequest("所选分类不存在");
@@ -91,7 +110,7 @@ public class LifeGoalService {
 
     @Transactional
     public LifeGoal update(int slotNo, GoalUpdateRequest request) {
-        LifeGoal goal = get(slotNo);
+        LifeGoal goal = lockedGoal(slotNo);
         validateCategory(request.categoryId());
         validateStatusChange(goal, request.status());
         mapper.update(null, new LambdaUpdateWrapper<LifeGoal>()
@@ -105,7 +124,7 @@ public class LifeGoalService {
 
     @Transactional
     public LifeGoal updateStatus(int slotNo, GoalStatus status) {
-        LifeGoal goal = get(slotNo);
+        LifeGoal goal = lockedGoal(slotNo);
         validateStatusChange(goal, status);
         mapper.update(null, new LambdaUpdateWrapper<LifeGoal>().eq(LifeGoal::getId, goal.getId())
                 .set(LifeGoal::getStatus, status));

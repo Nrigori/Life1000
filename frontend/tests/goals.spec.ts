@@ -33,7 +33,7 @@ async function mockApi(page: Page, authenticated = true) {
       return
     }
     expect(req.headers().authorization).toBe('Bearer browser-test-token')
-    if (/^\/api\/goals\/\d+\/cover$/.test(path)) {
+    if (/^\/api\/goals\/\d+\/(cover|completion)$/.test(path)) {
       await route.fulfill({ status: 204 })
     } else if (/^\/api\/goals\/\d+\/(check-items|records|attachments)$/.test(path)) {
       await route.fulfill({ json: [] })
@@ -99,7 +99,7 @@ test('login uses existing API, then goals opens with five columns and blank slot
   await expect(tile(page, 1)).toContainText('尚未写下')
   await expect(tile(page, 3)).toContainText('独自去西藏旅行')
   await expect(tile(page, 3)).toContainText('尚无影像')
-  await expect(tile(page, 3).getByRole('button', { name: '完成入口暂未开放' })).toBeDisabled()
+  await expect(tile(page, 3).getByRole('button', { name: '标记为完成' })).toBeEnabled()
   const box = await tile(page, 1).boundingBox()
   expect(box?.width).toBeGreaterThanOrEqual(220)
   expect(box?.width).toBeLessThanOrEqual(240)

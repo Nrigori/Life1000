@@ -138,4 +138,18 @@ class GoalDetailServiceTest {
         assertThat(restartedFiles.pending()).isEmpty();
     }
 
+
+    @Test void completionProofUsesSameStorageWithNullRecordAndSurvivesCommit() throws Exception {
+        var parent = new LifeGoal(); parent.setId(10L); parent.setStatus(GoalStatus.COMPLETED);
+        when(goals.selectOne(any())).thenReturn(parent);
+        var proof = service.upload(27,null,"COMPLETION",new MockMultipartFile("file","proof.txt","text/plain","proof".getBytes()));
+        assertThat(proof.getStage()).isEqualTo("COMPLETION");
+        assertThat(proof.getRecordId()).isNull();
+        assertThat(proof.getGoalId()).isEqualTo(10L);
+        when(attachments.selectCount(any())).thenReturn(1L);
+        finish(TransactionSynchronization.STATUS_COMMITTED);
+        assertThat(Files.readString(files.resolve(proof.getFilePath()))).isEqualTo("proof");
+        assertThat(files.pending()).isEmpty();
+    }
+
 }

@@ -5,9 +5,18 @@ import type { Category, GoalFilters, LifeGoal } from '../api/goals'
 import { errorMessage } from '../api/http'
 import { makeRows, RENDER_BATCH } from '../goals/slots'
 import GoalTile from '../components/GoalTile.vue'
+import CompletionDialog from '../components/CompletionDialog.vue'
+import CompletionFeedback from '../components/CompletionFeedback.vue'
 import GoalCreateDialog from '../components/GoalCreateDialog.vue'
 import '../styles/goals.css'
 
+const completing = ref<LifeGoal>()
+const feedback = ref<number>()
+async function completed() {
+  feedback.value = completing.value!.slotNo
+  completing.value = undefined
+  await load()
+}
 const view = ref<'cards' | 'list'>('cards')
 const filters = reactive<GoalFilters>({ keyword: '', categoryId: '', status: '' })
 const filtered = computed(() => Boolean(filters.keyword.trim() || filters.categoryId || filters.status))
@@ -130,7 +139,7 @@ onBeforeUnmount(() => {
         <ol v-else class="goals-collection" :class="view === 'cards' ? 'goals-grid' : 'goals-list'" aria-label="人生千事固定位置">
           <GoalTile v-for="row in visibleRows" :key="row.slotNo" :slot-no="row.slotNo" :goal="row.goal"
             :category-name="row.goal?.categoryId ? categoryNames.get(row.goal.categoryId) : undefined"
-            :view="view" @create="createSlot = $event" />
+            :view="view" @create="createSlot = $event" @complete="completing = $event" />
         </ol>
         <div v-if="visibleCount < rows.length" ref="sentinel" class="scroll-sentinel">
           <button type="button" @click="showMore">继续向下展开</button>
@@ -138,6 +147,8 @@ onBeforeUnmount(() => {
         <p v-else-if="rows.length" class="collection-end">{{ filtered ? '以上是符合条件的事项。' : '1000 · 空白也属于这里。' }}</p>
       </template>
     </div>
+    <CompletionDialog v-if="completing" :goal="completing" @close="completing = undefined" @saved="completed" />
+    <CompletionFeedback v-if="feedback !== undefined" :slot="feedback" @expired="feedback = undefined" />
     <GoalCreateDialog v-if="createSlot !== null" :slot-no="createSlot" :categories="categories"
       @close="createSlot = null" @created="created" @occupied="load" />
   </section>

@@ -15,10 +15,11 @@ export const router = createRouter({
   routes: [
     { path: '/', component: PlaceholderView, meta: { title: '首页' } },
     { path: '/goals', component: () => import('../views/GoalsView.vue'), meta: { title: '人生千事', requiresAuth: true } },
-    ...navigation.filter(item => item.path !== '/goals').map(({ path, title }) => ({
+    ...navigation.filter(item => item.path !== '/goals' && item.path !== '/timeline').map(({ path, title }) => ({
       path, component: PlaceholderView, meta: { title },
     })),
     { path: '/goals/:slotNo', component: () => import('../views/GoalDetailView.vue'), meta: { title: '事项详情', requiresAuth: true } },
+    { path: '/timeline', component: () => import('../views/TimelineView.vue'), meta: { title: '时间轴', requiresAuth: true } },
     { path: '/login', component: () => import('../views/LoginView.vue'), meta: { title: '登录' } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

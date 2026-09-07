@@ -2,7 +2,7 @@ import { fetchApi, request } from './http'
 export interface CheckItem { id: number; content: string; completed: boolean; sortOrder: number }
 export interface GoalRecord { id: number; content: string; recordDate: string }
 export interface Attachment {
-  id: number; recordId: number | null; stage: 'GENERAL' | 'PROCESS'; originalName: string
+  id: number; recordId: number | null; stage: 'GENERAL' | 'PROCESS' | 'COMPLETION'; originalName: string
   fileSize: number; mimeType: string; isImage: boolean; allowHomeBackground: boolean
 }
 export const readChecks = (slot: number) => request<CheckItem[]>(`/goals/${slot}/check-items`)

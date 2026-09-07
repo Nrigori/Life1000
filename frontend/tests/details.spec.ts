@@ -15,6 +15,7 @@ async function mockDetail(page: Page, completed = false) {
     const req = route.request(), path = new URL(req.url()).pathname, method = req.method()
     if (!path.startsWith('/api/')) { await route.fallback(); return }
     expect(req.headers().authorization).toBe('Bearer detail-token')
+    if (path === '/api/goals/27/completion') { await route.fulfill({ status: 204 }); return }
     if (path === '/api/categories') { await route.fulfill({ json: [{ id: 1, name: '旅行' }, { id: 2, name: '学习' }] }); return }
     if (path === '/api/goals/27') {
       if (method === 'PUT') {

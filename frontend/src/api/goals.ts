@@ -10,6 +10,7 @@ export interface LifeGoal {
   status: GoalStatus
   reason: string | null
   coverAttachmentId: number | null
+  completedDate?: string | null
 }
 
 export interface Category {

@@ -6,6 +6,9 @@ import { errorMessage } from '../api/http'
 import { readChecks, readRecords, readAttachments, readCover, write, upload, downloadFile, fileSize,
   type CheckItem, type GoalRecord, type Attachment } from '../api/details'
 import { formatSlot } from '../goals/slots'
+import { readCompletion, undoCompletion, type Completion } from '../api/completion'
+import CompletionDialog from '../components/CompletionDialog.vue'
+import CompletionFeedback from '../components/CompletionFeedback.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import AttachmentImage from '../components/AttachmentImage.vue'
 import '../styles/detail.css'
@@ -13,6 +16,20 @@ import '../styles/detail.css'
 const route = useRoute()
 const router = useRouter()
 const goal = ref<LifeGoal>()
+const completion = ref<Completion>()
+const completionOpen = ref(false)
+const feedback = ref<number>()
+const proofs = computed(() => attachments.value.filter(file => file.stage === 'COMPLETION'))
+async function completed() {
+  if (goal.value?.status !== 'COMPLETED') feedback.value = goal.value!.slotNo
+  completionOpen.value = false
+  await run(refresh)
+}
+function undo() {
+  confirmation.value = { title: '撤销完成？', message: '恢复完成前的状态，完成档案与证明附件都会保留。', action: async () => {
+    await undoCompletion(goal.value!.slotNo); confirmation.value = undefined; await refresh()
+  } }
+}
 const categories = ref<Category[]>([])
 const checks = ref<CheckItem[]>([])
 const records = ref<GoalRecord[]>([])
@@ -33,19 +50,19 @@ let revision = 0
 async function load() {
   const current = ++revision
   loading.value = true; error.value = ''; editing.value = false; more.value = false
-  goal.value = undefined
+  goal.value = undefined; completion.value = undefined; completionOpen.value = false
   checkForm.value = undefined; recordForm.value = undefined; confirmation.value = undefined; preview.value = undefined
   const slot = Number(route.params.slotNo)
   if (!Number.isInteger(slot) || slot < 1 || slot > 1000) {
     error.value = '编号必须为 001～1000。'; loading.value = false; return
   }
   try {
-    const [value, cats, items, notes, files, image] = await Promise.all([
-      getGoal(slot), getCategories(), readChecks(slot), readRecords(slot), readAttachments(slot), readCover(slot),
+    const [value, cats, items, notes, files, image, archive] = await Promise.all([
+      getGoal(slot), getCategories(), readChecks(slot), readRecords(slot), readAttachments(slot), readCover(slot), readCompletion(slot),
     ])
     if (current !== revision) return
     goal.value = value; categories.value = cats; checks.value = items; records.value = notes
-    attachments.value = files; cover.value = image
+    attachments.value = files; cover.value = image; completion.value = archive
   } catch (cause) { if (current === revision) error.value = errorMessage(cause) }
   finally { if (current === revision) loading.value = false }
 }
@@ -53,11 +70,11 @@ async function refresh() {
   if (!goal.value) return
   const slot = goal.value.slotNo
   const current = revision
-  const [value, items, notes, files, image] = await Promise.all([
-    getGoal(slot), readChecks(slot), readRecords(slot), readAttachments(slot), readCover(slot),
+  const [value, items, notes, files, image, archive] = await Promise.all([
+    getGoal(slot), readChecks(slot), readRecords(slot), readAttachments(slot), readCover(slot), readCompletion(slot),
   ])
   if (current !== revision) return
-  goal.value = value; checks.value = items; records.value = notes; attachments.value = files; cover.value = image
+  goal.value = value; checks.value = items; records.value = notes; attachments.value = files; cover.value = image; completion.value = archive
 }
 async function run(action: () => Promise<void>) {
   if (busy.value) return
@@ -162,6 +179,7 @@ watch(() => route.params.slotNo, load, { immediate: true })
       <div v-if="goal" class="detail-actions">
         <button v-if="!editing" :disabled="busy" @click="edit">编辑</button>
         <button :aria-expanded="more" @click="more = !more">更多</button>
+        <button v-if="more && goal.status === 'COMPLETED'" :disabled="busy" @click="undo">撤销完成</button>
         <button v-if="more" :disabled="busy" @click="clearGoal">清空这个编号</button>
       </div>
     </nav>
@@ -234,7 +252,7 @@ watch(() => route.params.slotNo, load, { immediate: true })
             <button v-if="file.isImage" class="attachment-thumb" :aria-label="'预览 ' + file.originalName" @click="preview = file"><AttachmentImage :id="file.id" :alt="file.originalName" /></button>
             <div v-else class="document-symbol" aria-hidden="true">▤</div>
             <h3>{{ file.originalName }}</h3>
-            <p class="quiet">{{ file.originalName.split('.').pop()?.toUpperCase() }} · {{ fileSize(file.fileSize) }} · {{ file.stage === 'PROCESS' ? '过程记录' : '事项附件' }}</p>
+            <p class="quiet">{{ file.originalName.split('.').pop()?.toUpperCase() }} · {{ fileSize(file.fileSize) }} · {{ file.stage === 'PROCESS' ? '过程记录' : file.stage === 'COMPLETION' ? '完成证明' : '事项附件' }}</p>
             <div class="row-actions"><button :disabled="busy" @click="run(() => downloadFile(file))">下载</button><button :disabled="busy" @click="confirmDelete('删除附件？', file.originalName + ' 将从记录册与磁盘中删除。', '/attachments/' + file.id)">删除附件</button></div>
             <template v-if="file.isImage">
               <button :disabled="busy || goal.coverAttachmentId === file.id" @click="setCover(file)">{{ goal.coverAttachmentId === file.id ? '已选为封面' : '设为封面' }}</button>
@@ -243,7 +261,23 @@ watch(() => route.params.slotNo, load, { immediate: true })
           </article>
         </div>
       </section>
+      <section v-if="goal.status === 'COMPLETED'" class="detail-section completion-section">
+        <div class="section-heading"><h2>完成之后</h2><button :disabled="busy" @click="completionOpen = true">编辑完成档案</button></div>
+        <template v-if="completion">
+          <p>完成日期：<time :datetime="completion.completedDate">{{ completion.completedDate.replaceAll('-', '.') }}</time></p>
+          <p v-if="completion.completionNote" class="prose">{{ completion.completionNote }}</p>
+          <p v-if="completion.rating" class="archive-rating" :aria-label="completion.rating + ' 星'">{{ '★'.repeat(completion.rating) }}</p>
+        </template>
+        <div v-if="proofs.length" class="record-files">
+          <button v-for="file in proofs" :key="file.id" @click="file.isImage ? preview = file : run(() => downloadFile(file))">
+            <AttachmentImage v-if="file.isImage" :id="file.id" :alt="file.originalName" />{{ file.originalName }}
+          </button>
+        </div>
+      </section>
+      <div v-else class="detail-section completion-entry"><button :disabled="busy" @click="completionOpen = true">○ 标记为完成</button></div>
     </template>
+    <CompletionDialog v-if="completionOpen && goal" :goal="goal" :editing="goal.status === 'COMPLETED'" @close="completionOpen = false" @saved="completed" />
+    <CompletionFeedback v-if="feedback !== undefined" :slot="feedback" @expired="feedback = undefined" />
 
     <ModalDialog v-if="checkForm" title="完成条件" :busy="busy" @close="checkForm = undefined">
       <form class="entry-form" @submit.prevent="saveCheck"><label>条件内容<textarea v-model="checkForm.content" required maxlength="10000" rows="3" autofocus /></label>
@@ -257,7 +291,7 @@ watch(() => route.params.slotNo, load, { immediate: true })
     </ModalDialog>
     <ModalDialog v-if="confirmation" :title="confirmation.title" :busy="busy" @close="confirmation = undefined">
       <p>{{ confirmation.message }}</p><p v-if="error" class="form-error" role="alert">{{ error }}</p>
-      <div class="dialog-actions"><button autofocus :disabled="busy" @click="confirmation = undefined">取消</button><button class="ink-button" :disabled="busy" @click="run(confirmation.action)">{{ confirmation.title.startsWith('清空') ? '确认清空' : '确认删除' }}</button></div>
+      <div class="dialog-actions"><button autofocus :disabled="busy" @click="confirmation = undefined">取消</button><button class="ink-button" :disabled="busy" @click="run(confirmation.action)">{{ confirmation.title.startsWith('清空') ? '确认清空' : confirmation.title.startsWith('撤销') ? '确认撤销' : '确认删除' }}</button></div>
     </ModalDialog>
     <ModalDialog v-if="preview" class="image-dialog" :title="preview.originalName" @close="preview = undefined">
       <AttachmentImage :id="preview.id" :alt="preview.originalName" /><div class="dialog-actions"><button autofocus @click="preview = undefined">关闭预览</button></div>
