@@ -2,7 +2,7 @@
 
 本次只补运行工程：Nginx + Vue production build + Spring Boot jar + 现有 MySQL。不修改 PRD、业务代码、数据库结构或认证语义。
 
-浏览器入口为 **http://life1000.test**：
+浏览器入口为 **http://localhost**：
 
 - Nginx 只监听 127.0.0.1:80，直接提供 frontend/dist。
 - /api/ 原样代理到 127.0.0.1:8080；Spring Boot 仍只绑定回环地址。
@@ -14,13 +14,7 @@
 
 1. 准备 **PowerShell 7.2+、Java 21、Node.js 22.12+、Maven、MySQL**。使用 PowerShell 7 的终端（pwsh），不是 Windows PowerShell 5.1。MySQL 继续由原有方式启动；不新建或清空数据库。
 2. 从 [Nginx 官方下载页](https://nginx.org/en/download.html) 手工下载 Windows 版本并解压，例如 D:\nginx。目录中应有 nginx.exe 和 conf/mime.types。脚本不会下载安装 Nginx，也不使用或覆盖安装目录中的 nginx.conf。可参考 [Windows 官方说明](https://nginx.org/en/docs/windows.html)。
-3. 以管理员身份打开文本编辑器，编辑 C:\Windows\System32\drivers\etc\hosts，添加一行：
-
-   ```text
-   127.0.0.1 life1000.test
-   ```
-
-   hosts 不带端口或 http://。移除这个名称的其他冲突映射。启动脚本只检查解析结果，**不会修改 hosts**。通常仅这一步需要管理员权限；其余在普通终端运行。
+3. 入口使用 Windows 本机地址 **http://localhost**，不需要编辑 hosts，也不需要为入口配置申请管理员权限。
 4. 在项目根目录复制模板：
 
    ```powershell
@@ -51,7 +45,7 @@
 ```powershell
 .\build-local.ps1
 .\start-local.ps1
-# 浏览器自动打开 http://life1000.test
+# 浏览器自动打开 http://localhost
 .\stop-local.ps1
 ```
 
@@ -65,7 +59,7 @@ build-local.ps1 依次执行 npm run build 和 Maven package（运行测试，�
 
 Maven 使用项目 .cache/maven 缓存。构建时只读取工具路径，不要求数据库凭据；临时移除 DB_*、LIFE1000_*、Spring 配置覆盖等继承变量，避免前端接收私密配置、避免构建误触真实数据库测试。脚本完成或失败后恢复调用进程环境。没有配置文件时会明确提示复制模板。开发依赖缺失会由 npm 明确报错，请先 npm ci。
 
-start-local.ps1 会检查配置、Java、jar、dist、Nginx、JWT Secret、原有附件目录和 hosts，然后：
+start-local.ps1 会检查配置、Java、jar、dist、Nginx、JWT Secret、原有附件目录，然后：
 
 1. 检查端口占用与本项目进程身份；不会接管其他 8080/80 服务。
 2. 从 deploy/nginx/life1000.conf 模板生成项目专用配置，替换绝对路径并执行 nginx -t。
@@ -106,11 +100,10 @@ stop-local.ps1 不需要读取密码。它核对 **PID、创建时间、可执�
 | 找不到 Java / Maven / Nginx | 检查相应 HOME 是否是工具根目录，不是 bin 目录 |
 | 找不到 jar / dist | 先运行 build-local.ps1；构建失败不应继续启动旧产物 |
 | 80 / 8080 占用 | 自行停止原开发服务器或其他服务；脚本不会杀掉它们 |
-| hosts 解析不正确 | 手工添加回环映射，检查重复条目；浏览器禁用此本地域名的代理 |
 | Nginx -t 失败 | 查看错误日志与实际生成配置；确认 mime.types、dist、目录访问权限 |
 | 后端退出或数据库健康超时 | 查看后端日志；确认 MySQL、DB_URL、账号权限与密码、上传目录 |
 | PID 身份不一致 | 不继续发停止信号；核对对应 PID 实际程序。确认不再有本项目实例后才可手工移走旧 JSON 记录，勿仅凭进程名杀进程 |
-| 浏览器无法访问 | 检查系统/浏览器代理绕过 life1000.test 和 127.0.0.1；检查 hosts、端口和 Nginx 日志 |
+| 浏览器无法访问 | 检查系统/浏览器代理绕过 localhost 和 127.0.0.1；检查端口和 Nginx 日志 |
 | 配置或日志含用户私密信息 | 留在本机；不要纳入提交 |
 
 实际 Nginx 配置可独立检查（在成功生成配置后）：
@@ -136,7 +129,7 @@ $prefix = ((Join-Path $PWD '.local-runtime/nginx').Replace('\','/') + '/')
 | 新增 PowerShell 运行检查 | 39 通过；含真实临时子进程身份/停止隔离，以及入口失败退出码 |
 | Nginx 示例 | 路径替换、回环监听、SPA fallback、API 前缀与上传上限静态检查通过；未运行真实 nginx -t |
 | 私有文件 / bundle | git check-ignore 通过；生产 bundle 未发现 DB_PASSWORD、LIFE1000_JWT_SECRET、测试私密标记或 127.0.0.1:8080 |
-| 真实 MySQL / life1000.test / 真实 Nginx 启停 | 当前没有 DB 凭据和可用 Nginx，未执行，须按下文验收 |
+| 真实 MySQL / localhost / 真实 Nginx 启停 | 当前没有 DB 凭据和可用 Nginx，未执行，须按下文验收 |
 
 首次构建发现环境隔离把 Spring 配置覆盖变量留成空值，导致一项原有断言失败。已修复为删除该环境变量并增加回归检查；最终上述全量构建通过，业务代码与原有断言未修改。
 
@@ -169,18 +162,22 @@ $c = $null
 
 测试使用已有 mysql profile，未添加 skeleton 绕过。仓库没有独立 Phase 1/2 VALIDATION 文档，相应记录在 README；Phase 3～6 有独立文档。
 
+本次 localhost 入口调整后，已重新运行原本地运行脚本测试：39 项全部通过。业务构建结果沿用上次记录，本次未重新构建业务代码；未执行真实 Nginx 启停验收。
+
+已在运行的实例再次执行 start-local.ps1 会重新生成配置并 reload Nginx，此后使用 http://localhost；无需重新构建前后端。
+
 ## Windows 本机最终验收
 
 本轮没有可用 Windows Nginx 或 DB 凭据，**以下真实入口验收尚未执行**。用户以前的 Phase 验收仍然有效，但不等于本次运行架构已验收。
 
-1. 按首次准备填写配置、hosts，确保原有 MySQL 已运行，原 Vite/后端已停止；完成 build。
-2. start 自动打开 http://life1000.test，地址栏无 IP、5173 或 8080。首页一屏正常。
+1. 按首次准备填写配置，确保原有 MySQL 已运行，原 Vite/后端已停止；完成 build。
+2. start 自动打开 http://localhost，地址栏无 IP、5173 或 8080。首页一屏正常。
 3. 登录后依次打开 /goals、已有 /goals/27（替换为实际事项）、/timeline、/quotes、/stats、/settings；直接刷新这些路由不出现 Nginx 404。
 4. Network 中业务请求为同源 /api/；附件 content 请求带 Authorization，无 URL token，无 uploads 静态地址。未登录 API 返回 401。
 5. 确认真实事项、完成档案、时间轴、金句与设置仍正确；背景和图片预览正常，文档下载正常。
 6. 在可清理测试事项上传一个接近但不超过 50 MB 的附件；确认成功。超过现有后端限制仍拒绝；测试后通过 UI 删除该附件。备份 ZIP 可完整下载。
 7. 再运行 start 不增加第二个 Java 或 Nginx master。修改固定配置后 stop/start；有效 Token 不因 Secret 重建而失效，已有附件仍能读取。
-8. stop 后 life1000.test 无法访问，8080 不再有本项目服务，MySQL 保持运行。其他 Java/Nginx 实例不被停止。再次 stop 可安全重复。
+8. stop 后 localhost 无法访问，8080 不再有本项目服务，MySQL 保持运行。其他 Java/Nginx 实例不被停止。再次 stop 可安全重复。
 9. 检查监听地址：
 
    ```powershell

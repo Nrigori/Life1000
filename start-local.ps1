@@ -11,11 +11,6 @@ try {
     $config = Read-LocalConfig $ConfigPath
     $artifacts = Get-LocalArtifacts $PSScriptRoot $config
     $backendEnv = Get-BackendEnvironment $config
-    try { $addresses = [Net.Dns]::GetHostAddresses('life1000.test') }
-    catch { throw 'life1000.test 尚未解析。请按 docs/LOCAL-RUN.md 手工配置 hosts：127.0.0.1 life1000.test。' }
-    if ($addresses.Count -eq 0 -or @($addresses | Where-Object { $_.ToString() -ne '127.0.0.1' }).Count -gt 0) {
-        throw 'life1000.test 必须仅解析到 127.0.0.1。请检查 hosts；脚本不会修改系统文件。'
-    }
     $lock = Enter-RuntimeLock $PSScriptRoot
     $javaProcess = Get-OwnedProcess (Read-ProcessRecord $javaRecordPath)
     $nginxProcess = Get-OwnedProcess (Read-ProcessRecord $nginxRecordPath)
@@ -61,12 +56,12 @@ try {
         if ([int](Get-Content -LiteralPath $pidPath -Raw) -ne $nginxProcess.Id) { throw 'Nginx PID 不一致，未 reload。' }
         Invoke-Nginx $artifacts.Nginx $prefix @('-s','reload')
     }
-    $page = Invoke-WebRequest 'http://life1000.test/' -NoProxy -TimeoutSec 10
+    $page = Invoke-WebRequest 'http://localhost/' -NoProxy -TimeoutSec 10
     if ($page.StatusCode -ne 200 -or -not $page.Content.Contains('<div id="app">')) {
         throw '首页静态文件检查失败，请检查 Nginx 配置和前端构建。'
     }
-    Write-Host 'Life1000 已启动：http://life1000.test'
-    if (-not $NoBrowser) { Start-Process 'http://life1000.test' }
+    Write-Host 'Life1000 已启动：http://localhost'
+    if (-not $NoBrowser) { Start-Process 'http://localhost' }
 } catch {
     Write-Host ("启动失败：{0}" -f $_.Exception.Message) -ForegroundColor Red
     # Roll back only processes created by this invocation; retain existing instances.

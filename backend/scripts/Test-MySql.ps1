@@ -1,4 +1,4 @@
-# Run from any directory. Credentials remain in the caller's environment.
+﻿# Run from any directory. Credentials remain in the caller's environment.
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($env:DB_USERNAME)) {
     throw '请先在当前 PowerShell 会话设置 DB_USERNAME；本脚本不会跳过 MySQL 测试。'
@@ -16,3 +16,4 @@ try {
 } finally {
     Pop-Location
 }
+

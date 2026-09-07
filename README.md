@@ -2,7 +2,7 @@
 
 帮助自己记录人生，而不是管理人生。产品规格以 [docs/PRD.md](docs/PRD.md) 为准。
 
-V1 Phase 0～6 已完成。Windows 本机长期运行使用 **Nginx + 前端生产构建 + Spring Boot jar + MySQL**，入口为 http://life1000.test。首次配置、构建、启停与验收请阅读 [本地运行指南](docs/LOCAL-RUN.md)。下方保留各阶段开发方式与验收记录。
+V1 Phase 0～6 已完成。Windows 本机长期运行使用 **Nginx + 前端生产构建 + Spring Boot jar + MySQL**，入口为 http://localhost。首次配置、构建、启停与验收请阅读 [本地运行指南](docs/LOCAL-RUN.md)。下方保留各阶段开发方式与验收记录。
 
 ## 目录与技术栈
 

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -111,8 +112,11 @@ class MysqlIntegrationTest {
             mvc.perform(post("/api/goals/" + slot).header("Authorization", token)
                             .contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"invalid\"}"))
                     .andExpect(status().isBadRequest());
+            // MySQL CHECK errors may be translated as UncategorizedSQLException (3819 / HY000).
             assertThatThrownBy(() -> jdbc.update("INSERT INTO life_goal(slot_no, title) VALUES (?, 'invalid')", slot))
-                    .isInstanceOf(DataIntegrityViolationException.class);
+                    .isInstanceOf(DataAccessException.class)
+                    .rootCause()
+                    .hasMessageContaining("Check constraint 'ck_life_goal_slot' is violated");
         }
         mvc.perform(post("/api/goals/1000").header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"上边界\"}"))
