@@ -12,3 +12,6 @@ target/
 application-local.yml
 uploads/
 !**/.mvn/wrapper/maven-wrapper.properties
+
+/local-config.ps1
+/.local-runtime/
