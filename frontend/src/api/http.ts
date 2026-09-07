@@ -6,17 +6,17 @@ export class ApiError extends Error {
   }
 }
 
-export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function fetchApi(path: string, options: RequestInit = {}): Promise<Response> {
   const headers = new Headers(options.headers)
   const token = getToken()
   if (token && path !== '/auth/login') headers.set('Authorization', `Bearer ${token}`)
-  if (options.body) headers.set('Content-Type', 'application/json')
+  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   const response = await fetch(`/api${path}`, {
     ...options,
     headers,
     signal: options.signal
-      ? AbortSignal.any([options.signal, AbortSignal.timeout(15000)])
-      : AbortSignal.timeout(15000),
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(options.body instanceof FormData ? 120000 : 15000)])
+      : AbortSignal.timeout(options.body instanceof FormData ? 120000 : 15000),
   })
   if (!response.ok) {
     if (response.status === 401 && path !== '/auth/login') {
@@ -26,6 +26,11 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     const body = await response.json().catch(() => null) as { message?: string } | null
     throw new ApiError(response.status, body?.message || '暂时无法读取，请稍后再试。')
   }
+  return response
+}
+
+export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const response = await fetchApi(path, options)
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }

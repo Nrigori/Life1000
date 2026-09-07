@@ -33,7 +33,11 @@ async function mockApi(page: Page, authenticated = true) {
       return
     }
     expect(req.headers().authorization).toBe('Bearer browser-test-token')
-    if (path === '/api/categories') {
+    if (/^\/api\/goals\/\d+\/cover$/.test(path)) {
+      await route.fulfill({ status: 204 })
+    } else if (/^\/api\/goals\/\d+\/(check-items|records|attachments)$/.test(path)) {
+      await route.fulfill({ json: [] })
+    } else if (path === '/api/categories') {
       await route.fulfill({ json: [{ id: 1, name: '旅行', sortOrder: 0 }, { id: 2, name: '学习', sortOrder: 1 }] })
     } else if (path === '/api/health') {
       await route.fulfill({ json: { status: 'UP' } })
@@ -136,6 +140,7 @@ test('create in 037 updates same card, list switches, confirmed deletion restore
   await expect(tile(page, 37)).toContainText('旅行')
   await tile(page, 37).getByRole('link').click()
   await expect(page).toHaveURL(/\/goals\/37$/)
+  await page.getByRole('button', { name: '更多', exact: true }).click()
   await page.getByRole('button', { name: '清空这个编号' }).click()
   await page.getByRole('button', { name: '取消', exact: true }).click()
   expect(api.goals.has(37)).toBe(true)

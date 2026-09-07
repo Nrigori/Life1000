@@ -53,7 +53,7 @@ public class LifeGoalController {
     }
 
     @DeleteMapping("/{slotNo}")
-    public ResponseEntity<Void> delete(@PathVariable int slotNo) {
+    public ResponseEntity<Void> delete(@PathVariable int slotNo) throws java.io.IOException {
         service.delete(slotNo);
         return ResponseEntity.noContent().build();
     }

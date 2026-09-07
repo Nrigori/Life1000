@@ -223,3 +223,47 @@ npm run test:e2e
 - 后端 `mvn verify`：构建通过，24 项测试通过、3 项真实 MySQL 测试因当前进程没有 DB_USERNAME/DB_PASSWORD 而跳过。Phase 1 的真实 MySQL 验收已由用户确认完成。
 
 **验证边界：**浏览器交互在真实 Edge 中执行，但 API 响应由测试模拟，不写入用户数据库。它验证前端请求和显示行为，不等同于本次重新完成浏览器到真实 MySQL 的端到端验收。本机启动真实后端后，可按同样步骤在空白编号创建、筛选、进入占位页并确认清空。
+
+## Phase 3：事项详情
+
+`/goals/:slotNo` 已替换占位页，默认以私人记录册的阅读模式展示。点击“编辑”才出现标题、分类、状态和为什么想做的表单。未完成事项仅可切换未开始/进行中；已完成事项可以编辑文字，不能经基础接口完成或撤销完成。
+
+主要文件：
+
+- `frontend/src/views/GoalDetailView.vue`、`styles/detail.css`：阅读/编辑状态、横幅封面、条件、我的记录、全部附件、二次确认删除。
+- `frontend/src/api/details.ts`、`api/http.ts`：JSON、multipart 上传及带 JWT 的文件读取。
+- `frontend/src/components/AttachmentImage.vue`、`GoalCover.vue`：Blob 图片预览与千事卡片封面；卸载时释放图片 URL。
+- `backend/src/main/java/com/life1000/goal/GoalDetailService.java`、`GoalDetailController.java`：复用既有 Entity / Mapper，实现条件、记录、附件与封面。
+- `LocalFiles.java`、`AttachmentCleanup.java`：UUID 文件存储、路径检查、事务完成后的文件处理和中断重试；原 LifeGoalService 删除同步纳入文件清理。
+- `backend/src/test/java/com/life1000/goal/GoalDetailServiceTest.java`、`Phase3MysqlIntegrationTest.java`、`frontend/tests/details.spec.ts`：文件/业务测试、真实 mysql 集成入口及浏览器交互测试。
+
+新增 API（全部需要 JWT）：
+
+| API | 用途 |
+| --- | --- |
+| GET /api/goals/{slotNo}/check-items | 读取按稳定顺序排列的条件 |
+| POST /api/goals/{slotNo}/check-items | 新增条件，JSON：content、completed |
+| PUT /api/check-items/{id} | 修改内容或勾选状态，JSON：content、completed |
+| DELETE /api/check-items/{id} | 删除条件 |
+| GET /api/goals/{slotNo}/records | 读取过程记录 |
+| POST /api/goals/{slotNo}/records | 新增记录，JSON：recordDate、content |
+| PUT /api/records/{id} | 修改日期/正文 |
+| DELETE /api/records/{id} | 删除记录及 PROCESS 附件 |
+| GET /api/goals/{slotNo}/attachments | 汇总 GENERAL / PROCESS 附件 |
+| POST /api/goals/{slotNo}/attachments | multipart：file、stage，可选 recordId |
+| GET /api/attachments/{id}/content?download=false | 认证图片预览；其他文件强制下载 |
+| GET /api/attachments/{id}/content?download=true | 强制下载文件 |
+| DELETE /api/attachments/{id} | 删除元数据及物理文件 |
+| GET /api/goals/{slotNo}/cover | 返回有效封面元数据；无图片返回 204 |
+| PUT /api/goals/{slotNo}/cover/{attachmentId} | 指定属于当前事项的图片为封面 |
+| PUT /api/attachments/{id}/home-background | JSON：allowed，切换图片候选标记 |
+
+额外的 GET 条件/附件/封面接口用于详情读取和共用封面规则；content 接口用于认证预览与下载，避免公开上传目录。基础信息编辑继续复用 PUT /api/goals/{slotNo}，删除继续复用 DELETE /api/goals/{slotNo}。没有新增与 Phase 3 无关的业务 API。
+
+封面优先使用 cover_attachment_id 指定的本事项图片，否则按 created_at、id 取最近上传的图片，无图片时保持无图。删除指定图片后既有外键自动把引用置空，并按上述规则回退。过程附件通过 record_id 关联记录，必须同属一个 goal_id；普通附件的 record_id 为空。删除记录/事项使用既有外键级联删除关联行，并在数据库事务提交后清理文件。
+
+附件默认位于后端工作目录的 `uploads/goals/027/<UUID>` 等位置；可通过 `LIFE1000_UPLOAD_DIRECTORY` 设置绝对目录（例如 `D:\Life1000Data\uploads`）。原文件名、大小、MIME、图片标记和相对路径只作为元数据存入 MySQL。磁盘文件名由后端生成，路径限制在上传根目录内，并拒绝符号链接路径。上传目录已被 Git 忽略。单文件上限 50 MB，没有引入云存储或新依赖。
+
+本阶段验证：前端构建通过；12 项浏览器测试通过；后端构建通过，32 项测试通过，4 项真实 MySQL 测试因本进程缺少 DB_USERNAME / DB_PASSWORD 跳过。浏览器测试模拟 API，后端文件测试使用真实临时目录；不代表已完成本阶段真实链路验收。
+
+Windows 启动、mysql 测试命令及完整人工验收步骤见 [Phase 3 验证文档](docs/PHASE3-VALIDATION.md)。Phase 4 完成系统及其后续功能均未实现；首页背景本阶段仅保存附件候选标记。

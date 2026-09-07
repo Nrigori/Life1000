@@ -18,10 +18,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class LifeGoalService {
     private final LifeGoalMapper mapper;
     private final CategoryMapper categories;
+    private final com.life1000.mapper.GoalAttachmentMapper attachments;
+    private final AttachmentCleanup cleanup;
 
-    public LifeGoalService(LifeGoalMapper mapper, CategoryMapper categories) {
+    public LifeGoalService(LifeGoalMapper mapper, CategoryMapper categories, com.life1000.mapper.GoalAttachmentMapper attachments, AttachmentCleanup cleanup) {
         this.mapper = mapper;
         this.categories = categories;
+        this.attachments = attachments;
+        this.cleanup = cleanup;
     }
 
     public static void validateSlot(int slotNo) {
@@ -108,9 +112,11 @@ public class LifeGoalService {
         return get(slotNo);
     }
 
-    @Transactional
-    public void delete(int slotNo) {
+    @Transactional(rollbackFor = java.io.IOException.class) public void delete(int slotNo) throws java.io.IOException {
         validateSlot(slotNo);
+        var parent = mapper.selectOne(new LambdaQueryWrapper<LifeGoal>().eq(LifeGoal::getSlotNo, slotNo).last("FOR UPDATE"));
+        if (parent == null) throw ApiException.notFound("该编号尚未写下");
+        cleanup.prepare(attachments.selectList(new LambdaQueryWrapper<com.life1000.entity.GoalAttachment>().eq(com.life1000.entity.GoalAttachment::getGoalId, parent.getId())));
         if (mapper.delete(new LambdaQueryWrapper<LifeGoal>().eq(LifeGoal::getSlotNo, slotNo)) == 0) {
             throw ApiException.notFound("该编号尚未写下");
         }

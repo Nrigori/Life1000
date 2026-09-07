@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LifeGoal } from '../api/goals'
 import { statusLabels } from '../api/goals'
+import GoalCover from './GoalCover.vue'
 import { formatSlot } from '../goals/slots'
 
 defineProps<{ slotNo: number; goal?: LifeGoal; categoryName?: string; view: 'cards' | 'list' }>()
@@ -17,9 +18,7 @@ const emit = defineEmits<{ create: [slotNo: number] }>()
     <template v-else>
       <RouterLink class="goal-open" :to="`/goals/${slotNo}`" :aria-label="`第 ${formatSlot(slotNo)} 件：${goal.title}`">
         <span class="slot-number">{{ formatSlot(slotNo) }}</span>
-        <span v-if="view === 'cards'" class="cover-empty">
-          <span class="cover-symbol" aria-hidden="true">✦</span><span>尚无影像</span>
-        </span>
+        <GoalCover v-if="view === 'cards'" :slot="slotNo" />
         <h2 class="goal-title" :title="goal.title">{{ goal.title }}</h2>
         <span class="goal-category">{{ categoryName || '未分类' }}</span>
         <span class="goal-status" :class="{ 'is-completed': goal.status === 'COMPLETED' }">{{ statusLabels[goal.status] }}</span>

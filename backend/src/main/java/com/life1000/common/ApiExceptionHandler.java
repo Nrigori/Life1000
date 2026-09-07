@@ -15,6 +15,14 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    ResponseEntity<Map<String, String>> tooLarge(Exception exception) {
+        return ResponseEntity.status(413).body(Map.of("code", "FILE_TOO_LARGE", "message", "文件不能超过 50 MB"));
+    }
+    @ExceptionHandler(java.io.IOException.class)
+    ResponseEntity<Map<String, String>> fileError(Exception exception) {
+        return ResponseEntity.status(503).body(Map.of("code", "FILE_UNAVAILABLE", "message", "文件暂时不可读写，请检查上传目录权限后重试"));
+    }
     @ExceptionHandler(ApiException.class)
     ResponseEntity<Map<String, String>> businessError(ApiException exception) {
         return ResponseEntity.status(exception.getStatus())

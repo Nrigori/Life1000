@@ -3,6 +3,10 @@ server:
   port: ${SERVER_PORT:8080}
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 51MB
   application:
     name: life1000
   profiles:
@@ -15,6 +19,7 @@ spring:
       fail-on-unknown-properties: true
 
 life1000:
+  upload-directory: ${LIFE1000_UPLOAD_DIRECTORY:./uploads}
   auth:
     username: ${LIFE1000_USERNAME}
     password: ${LIFE1000_PASSWORD}

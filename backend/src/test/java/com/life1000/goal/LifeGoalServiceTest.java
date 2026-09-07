@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 class LifeGoalServiceTest {
     private final LifeGoalMapper mapper = mock(LifeGoalMapper.class);
     private final CategoryMapper categories = mock(CategoryMapper.class);
-    private final LifeGoalService service = new LifeGoalService(mapper, categories);
+    private final LifeGoalService service = new LifeGoalService(mapper, categories, mock(com.life1000.mapper.GoalAttachmentMapper.class), mock(AttachmentCleanup.class));
 
     @ParameterizedTest
     @ValueSource(ints = {-1, 0, 1001, Integer.MAX_VALUE})

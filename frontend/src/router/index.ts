@@ -18,7 +18,7 @@ export const router = createRouter({
     ...navigation.filter(item => item.path !== '/goals').map(({ path, title }) => ({
       path, component: PlaceholderView, meta: { title },
     })),
-    { path: '/goals/:slotNo', component: () => import('../views/GoalDetailPlaceholderView.vue'), meta: { title: '事项详情', requiresAuth: true } },
+    { path: '/goals/:slotNo', component: () => import('../views/GoalDetailView.vue'), meta: { title: '事项详情', requiresAuth: true } },
     { path: '/login', component: () => import('../views/LoginView.vue'), meta: { title: '登录' } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

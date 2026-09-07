@@ -1,0 +1,48 @@
+.goal-detail { max-width: 1120px; margin: 0 auto; padding: 32px 56px 60px; }
+.detail-toolbar, .detail-actions, .section-heading, .row-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.detail-toolbar, .section-heading { justify-content: space-between; }
+.detail-toolbar a { text-decoration: none; font-size: 14px; }
+.detail-heading { margin: 44px 0 26px; }
+.detail-heading h1 { font-size: clamp(27px, 3.2vw, 40px); line-height: 1.4; margin: 10px 0; overflow-wrap: anywhere; }
+.detail-meta, .quiet { color: var(--muted, #7a6a5b); font-size: 14px; }
+.detail-banner { width: 100%; height: 290px; padding: 0; overflow: hidden; border: 1px solid #e0d5c5; border-radius: 5px; background: #eee6d9; }
+.detail-banner img { width: 100%; height: 100%; object-fit: cover; }
+.no-image { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #9c8c78; font-size: 14px; }
+.no-image > span { font-size: 35px; font-weight: 300; }
+.detail-section, .basic-edit { margin-top: 38px; padding-top: 28px; border-top: 1px solid #e5dbcd; }
+.detail-section h2, .basic-edit h2 { font-size: 21px; font-weight: 500; margin: 0 0 14px; }
+.detail-section h2 small { font-size: 12px; color: #9a8a77; font-weight: 400; margin-left: 9px; }
+.prose { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.95; }
+.edit-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.check-list, .record-list { list-style: none; padding: 0; }
+.check-list li { display: flex; gap: 20px; align-items: center; justify-content: space-between; padding: 9px 0; }
+.check-content { display: flex; align-items: baseline; gap: 12px; overflow-wrap: anywhere; min-width: 0; }
+.check-content input, .background-option input { width: auto; accent-color: #806344; }
+.checked { color: #9a8a77; text-decoration: line-through; }
+.row-actions { flex-shrink: 0; gap: 8px; }
+.row-actions button { font-size: 12px; padding: 4px 8px; background: transparent; }
+.record-list { padding-left: 24px; border-left: 1px solid #d9cbb8; margin: 26px 0 0 6px; }
+.record-list > li { position: relative; padding: 0 0 32px; }
+.record-list > li::before { content: ''; position: absolute; left: -29px; top: 9px; height: 7px; width: 7px; background: #af997c; border: 1px solid #f8f2e7; border-radius: 50%; }
+.record-list time { font-variant-numeric: tabular-nums; color: #897057; letter-spacing: .07em; }
+.record-files { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+.record-files button { display: flex; flex-direction: column; max-width: 160px; overflow-wrap: anywhere; font-size: 12px; }
+.record-files img { width: 140px; height: 90px; object-fit: cover; margin-bottom: 6px; }
+.upload-button { position: relative; display: inline-block; cursor: pointer; border: 1px solid #d6c8b5; border-radius: 4px; padding: 7px 12px; font-size: 13px; background: #f5eddf; }
+.upload-button input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.upload-button:focus-within { outline: 2px solid #806344; outline-offset: 3px; }
+.attachment-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 22px; }
+.attachment-card { border: 1px solid #e0d5c6; padding: 14px; border-radius: 4px; min-width: 0; }
+.attachment-card h3 { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; margin: 12px 0 6px; }
+.attachment-card > button { margin-top: 12px; font-size: 12px; }
+.attachment-thumb { display: block; width: 100%; height: 130px; overflow: hidden; padding: 0; }
+.attachment-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.document-symbol { height: 130px; display: grid; place-items: center; background: #eee7dc; color: #a58e72; font-size: 40px; }
+.background-option { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-top: 14px; }
+.image-dialog { width: min(1000px, calc(100vw - 32px)); }
+.image-dialog > img { display: block; max-width: 100%; max-height: 70vh; object-fit: contain; margin: auto; }
+@media (max-width: 800px) { .goal-detail { padding: 24px; } .attachment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 540px) {
+  .goal-detail { padding: 18px; } .detail-heading { margin-top: 28px; } .detail-banner { height: 210px; }
+  .edit-columns, .attachment-grid { grid-template-columns: 1fr; } .check-list li { align-items: flex-start; }
+}
