@@ -14,6 +14,7 @@ try {
             throw '请先运行 stop-local.ps1，再构建更新，避免覆盖正在使用的文件。'
         }
     }
+    # 长期运行使用静态生产文件和 jar，不依赖 Vite 开发服务；构建子进程不继承数据库或登录凭据。
     Invoke-IsolatedEnvironment @{JAVA_HOME=$config.JAVA_HOME} {
         Write-Host '构建前端生产文件（不传递数据库或登录配置）…'
         & npm.cmd --prefix (Join-Path $PSScriptRoot 'frontend') run build

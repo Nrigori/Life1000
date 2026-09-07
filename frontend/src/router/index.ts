@@ -26,6 +26,7 @@ export const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
 })
 
+// 前端守卫只判断是否持有 Token，后端 401 才确认失效；记录原路由便于重新登录后继续阅读。
 router.beforeEach(to => {
   if (to.meta.requiresAuth && !getToken()) return { path: '/login', query: { redirect: to.fullPath } }
 })
@@ -36,6 +37,7 @@ router.afterEach(to => {
   document.title = `${to.meta.title} · Life1000`
 })
 
+// 登录回跳只接受站内已知页面，拒绝协议相对地址与反斜杠，避免把用户带到外部地址。
 export function safeReturnPath(value: unknown): string {
   if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return '/'
   const resolved = router.resolve(value)

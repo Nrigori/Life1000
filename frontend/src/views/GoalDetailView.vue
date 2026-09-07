@@ -66,6 +66,7 @@ async function load() {
   } catch (cause) { if (current === revision) error.value = errorMessage(cause) }
   finally { if (current === revision) loading.value = false }
 }
+// 保存后的刷新沿用当前路由版本，避免用户切换事项后把上一件的附件或档案写入新页面。
 async function refresh() {
   if (!goal.value) return
   const slot = goal.value.slotNo
@@ -88,6 +89,7 @@ function edit() {
     status: goal.value.status, reason: goal.value.reason || '' })
   editing.value = true
 }
+// 已完成事项仍可编辑正文，但不从基础编辑接口传状态；完成与撤销各自走完整档案流程。
 async function saveGoal() {
   if (!form.title.trim()) { error.value = '请先写下标题。'; return }
   const current = revision

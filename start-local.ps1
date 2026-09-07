@@ -8,6 +8,7 @@ $startedNginx = $false
 $javaRecordPath = Join-Path $PSScriptRoot '.local-runtime/backend.json'
 $nginxRecordPath = Join-Path $PSScriptRoot '.local-runtime/nginx.json'
 try {
+    # 工具路径、数据库连接、登录凭据和固定 JWT 密钥来自本机私有配置，不写进命令行或 PID 文件。
     $config = Read-LocalConfig $ConfigPath
     $artifacts = Get-LocalArtifacts $PSScriptRoot $config
     $backendEnv = Get-BackendEnvironment $config
@@ -31,6 +32,7 @@ try {
         Save-ProcessRecord $javaRecordPath $javaProcess $artifacts.Java $marker
         $startedJava = $true
     }
+    # 进程存在不代表服务可用：通过原有登录和数据库健康接口确认就绪，不额外放开认证。
     Write-Host '等待后端与 MySQL 健康检查…'
     Wait-BackendHealthy $config (Read-ProcessRecord $javaRecordPath)
     if ($null -eq $nginxProcess) {
@@ -56,6 +58,7 @@ try {
         if ([int](Get-Content -LiteralPath $pidPath -Raw) -ne $nginxProcess.Id) { throw 'Nginx PID 不一致，未 reload。' }
         Invoke-Nginx $artifacts.Nginx $prefix @('-s','reload')
     }
+    # localhost 是浏览器入口；两端实际监听仍限定 127.0.0.1，不依赖自定义域名或 hosts 修改。
     $page = Invoke-WebRequest 'http://localhost/' -NoProxy -TimeoutSec 10
     if ($page.StatusCode -ne 200 -or -not $page.Content.Contains('<div id="app">')) {
         throw '首页静态文件检查失败，请检查 Nginx 配置和前端构建。'

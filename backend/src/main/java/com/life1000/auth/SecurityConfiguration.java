@@ -45,6 +45,7 @@ public class SecurityConfiguration {
         return new NimbusJwtEncoder(new ImmutableSecret<>(key));
     }
 
+    // 验签之外还校验签发方、接收方和当前单用户账号，避免接受用途或身份不符的 Token。
     @Bean
     JwtDecoder jwtDecoder(SecretKey key, AuthProperties properties) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key)
@@ -64,6 +65,8 @@ public class SecurityConfiguration {
         return Pbkdf2PasswordEncoder.defaultsForSpringSecurity_v5_8();
     }
 
+    // 使用显式 Bearer 请求头而非 Cookie 会话；禁用 CSRF 依赖这个前提。
+    // 除登录外，健康检查与附件读取同样要求 JWT；静态页面由 Nginx 提供。
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http

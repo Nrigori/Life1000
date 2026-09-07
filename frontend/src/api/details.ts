@@ -21,6 +21,7 @@ export async function upload(slot: number, file: File, recordId?: number) {
 export async function fileBlob(id: number, download = false, signal?: AbortSignal) {
   return (await fetchApi(`/attachments/${id}/content?download=${download}`, { signal })).blob()
 }
+// 下载也走认证 fetch；给浏览器触发下载留出时间后释放对象 URL，避免长时间浏览累积内存。
 export async function downloadFile(value: Attachment) {
   const url = URL.createObjectURL(await fileBlob(value.id, true))
   const link = document.createElement('a')

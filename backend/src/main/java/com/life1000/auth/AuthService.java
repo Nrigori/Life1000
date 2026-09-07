@@ -17,6 +17,7 @@ public class AuthService {
     private final JwtEncoder encoder;
     private final String passwordHash;
 
+    // 单用户身份来自私有配置，不建立注册或用户表；启动时生成内存密码摘要用于后续校验。
     public AuthService(AuthProperties properties, PasswordEncoder passwords, JwtEncoder encoder) {
         this.properties = properties;
         this.passwords = passwords;
@@ -25,6 +26,7 @@ public class AuthService {
     }
 
     public TokenResponse login(String username, String password) {
+        // 用户名错误时也执行密码校验，减少通过响应耗时区分账号是否正确的机会。
         // Always perform the password check, even when the username is wrong.
         boolean passwordMatches = passwords.matches(password, passwordHash);
         boolean usernameMatches = MessageDigest.isEqual(

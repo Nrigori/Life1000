@@ -16,6 +16,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class ApiExceptionHandler {
     private static final org.slf4j.Logger log=org.slf4j.LoggerFactory.getLogger(ApiExceptionHandler.class);
+    // 未预期的技术异常仅写服务端日志，响应不透出 SQL、路径或堆栈；业务错误另走明确提示。
     @ExceptionHandler(Exception.class)
     ResponseEntity<Map<String,String>> unexpected(Exception exception) {
         log.error("Request failed",exception);

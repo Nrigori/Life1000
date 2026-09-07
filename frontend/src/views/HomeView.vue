@@ -13,6 +13,7 @@ const loading = ref(true)
 let controller: AbortController | undefined
 let revision = 0
 let midnight: ReturnType<typeof setTimeout>
+// 午夜仅更新本地日期和年度比例，不重新随机照片或金句；随机查询属于进入首页或显式重试。
 function updateDate() {
   const now = new Date()
   today.value = calendar(now)
@@ -28,6 +29,7 @@ async function load() {
   controller?.abort(); controller = new AbortController()
   const signal = controller.signal
   errors.value = []; loading.value = true
+  // 三项内容独立降级，一张照片读不到不应连带隐藏金句和数字。
   const results = await Promise.allSettled([
     (async () => {
       const value = await randomBackground(signal)
@@ -38,6 +40,7 @@ async function load() {
         try { const image = new Image(); image.src = url; await image.decode() }
         catch (error) { URL.revokeObjectURL(url); throw error }
       }
+      // 解码结束时页面可能已离开；过期结果仍须释放刚创建的 URL，不能只跳过赋值。
       if (current !== revision) { if (url) URL.revokeObjectURL(url); return }
       revoke(); background.value = url
     })(),

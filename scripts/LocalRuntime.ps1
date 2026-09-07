@@ -64,6 +64,7 @@ function Invoke-IsolatedEnvironment($Values, [scriptblock]$Action) {
     try {
         foreach ($name in ($names | Select-Object -Unique)) {
             $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
+            # 空字符串也可能成为 Spring 配置覆盖项，所以必须删除变量而不是仅把值置空。
             Remove-Item -LiteralPath ('Env:' + $name) -ErrorAction SilentlyContinue
         }
         foreach ($name in $Values.Keys) { [Environment]::SetEnvironmentVariable($name, [string]$Values[$name], 'Process') }
@@ -88,6 +89,7 @@ function Read-ProcessRecord([string]$Path) {
     return $null
 }
 
+# PID 会被系统复用，必须同时核对创建时间、程序路径和项目标识，避免关闭无关进程。
 function Get-OwnedProcess($Record) {
     if ($null -eq $Record) { return $null }
     $process = Get-Process -Id ([int]$Record.pid) -ErrorAction SilentlyContinue
@@ -172,6 +174,7 @@ function Stop-OwnedNginx([string]$RecordPath, [string]$Root) {
     if (Test-Path -LiteralPath $RecordPath) { Remove-Item -LiteralPath $RecordPath }
 }
 
+# 健康检查凭据只用于回环请求；禁用系统代理和重定向，避免将本机登录信息转发到其他地址。
 function Wait-BackendHealthy($Config, $Record, [int]$TimeoutSeconds = 120) {
     $handler = [Net.Http.HttpClientHandler]::new()
     $handler.UseProxy = $false

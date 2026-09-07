@@ -18,6 +18,7 @@ public class LocalFiles {
     public LocalFiles(@Value("${life1000.upload-directory:./uploads}") String directory) {
         root = Path.of(directory).toAbsolutePath().normalize();
     }
+    // 规范化路径防止 ../ 越界，逐级拒绝符号链接，避免看似位于上传目录的路径实际指向外部。
     public Path resolve(String relative) throws IOException {
         Path path = root.resolve(relative).normalize();
         if (!path.startsWith(root) || path.equals(root)) throw ApiException.badRequest("文件路径不合法");
@@ -26,6 +27,7 @@ public class LocalFiles {
         }
         return path;
     }
+    // 原文件名仅作元数据展示；磁盘名由后端生成 UUID，同名文件不会覆盖，也不参与路径拼接。
     public String save(int slot, MultipartFile file) throws IOException {
         String relative = "goals/%03d/%s".formatted(slot, UUID.randomUUID());
         Path path = resolve(relative);

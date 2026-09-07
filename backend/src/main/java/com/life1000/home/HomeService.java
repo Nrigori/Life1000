@@ -28,6 +28,8 @@ public class HomeService {
         var value = settings.selectOne(new LambdaQueryWrapper<AppSetting>().eq(AppSetting::getSettingKey, key));
         return value == null ? null : value.getSettingValue();
     }
+    // 固定模式只匹配已有图片元数据，不要求参与随机；未设置模式时默认随机，固定引用无效则返回空。
+    // 随机不记上次结果，三种附件阶段均可参与；实际图片仍通过认证附件 API 读取。
     @Transactional(readOnly=true)
     public Background background() {
         var query = new LambdaQueryWrapper<GoalAttachment>().eq(GoalAttachment::getIsImage, true);

@@ -14,6 +14,7 @@ public class TimelineService {
     public record Year(int year, long count) {}
     private final GoalCompletionMapper completions;
     public TimelineService(GoalCompletionMapper completions) { this.completions = completions; }
+    // 只补当前年份以容纳空状态，历史年份来自实际完成数据，不生成人为的空白年份序列。
     public List<Year> years() {
         Map<Integer, Long> years = new TreeMap<>(Comparator.reverseOrder());
         years.put(LocalDate.now().getYear(), 0L);

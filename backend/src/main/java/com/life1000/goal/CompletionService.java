@@ -25,6 +25,7 @@ public class CompletionService {
     public CompletionService(LifeGoalMapper goals, GoalCompletionMapper completions, GoalDetailService details) {
         this.goals = goals; this.completions = completions; this.details = details;
     }
+    // 同一事项上的完成、撤销和附件变更通过父记录行锁串行处理，避免并发覆盖完成前状态。
     private LifeGoal lock(int slot) {
         LifeGoalService.validateSlot(slot);
         var goal = goals.selectOne(new LambdaQueryWrapper<LifeGoal>().eq(LifeGoal::getSlotNo, slot).last("FOR UPDATE"));
@@ -35,6 +36,7 @@ public class CompletionService {
         return completions.selectOne(new LambdaQueryWrapper<GoalCompletion>().eq(GoalCompletion::getGoalId, goalId));
     }
     public GoalCompletion get(int slot) { return archive(lock(slot).getId()); }
+    // 档案、事项状态与证明元数据在同一事务保存；文件失败也须回滚，磁盘善后交给附件清理机制。
     public GoalCompletion save(int slot, Input input, List<MultipartFile> files, boolean editing) throws IOException {
         if (input.completedDate() == null || input.completedDate().getYear() < 1000 || input.completedDate().getYear() > 9999
                 || (input.rating() != null && (input.rating() < 1 || input.rating() > 5)))
@@ -43,8 +45,10 @@ public class CompletionService {
         if (editing != (goal.getStatus() == GoalStatus.COMPLETED))
             throw ApiException.conflict(editing ? "该事项尚未完成，请重新读取" : "该事项已经完成，请重新读取");
         var archive = archive(goal.getId());
+        // 编辑已完成档案时保留原状态；撤销后再次完成则记录本次的起点，供下一次撤销恢复。
         GoalStatus before = editing && archive != null ? archive.getStatusBeforeCompletion() : goal.getStatus();
         if (before != GoalStatus.IN_PROGRESS && before != GoalStatus.NOT_STARTED) before = GoalStatus.NOT_STARTED;
+        // goal_id 的唯一约束保证一件事项只有一份档案；再次完成更新保留档案，不新增历史副本。
         if (archive == null) {
             archive = new GoalCompletion();
             archive.setGoalId(goal.getId()); archive.setCompletedDate(input.completedDate());
@@ -60,6 +64,7 @@ public class CompletionService {
         for (var file : files) details.upload(slot, null, "COMPLETION", file);
         return archive(goal.getId());
     }
+    // 撤销只恢复状态，不删档案或证明；时间轴按当前 COMPLETED 状态查询，节点会自然消失。
     public void undo(int slot) {
         var goal = lock(slot);
         if (goal.getStatus() != GoalStatus.COMPLETED) throw ApiException.conflict("该事项当前不是已完成状态");

@@ -11,6 +11,7 @@ export async function fetchApi(path: string, options: RequestInit = {}): Promise
   const token = getToken()
   if (token && path !== '/auth/login') headers.set('Authorization', `Bearer ${token}`)
   if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
+  // 相对 /api 同时适配开发代理和生产同源 Nginx；FormData 的边界由浏览器生成，不能手填 JSON 类型。
   const response = await fetch(`/api${path}`, {
     ...options,
     headers,
@@ -19,6 +20,7 @@ export async function fetchApi(path: string, options: RequestInit = {}): Promise
       : AbortSignal.timeout(path === '/backup/export' ? 600000 : options.body instanceof FormData ? 120000 : 15000),
   })
   if (!response.ok) {
+    // 失效认证统一清理并通知路由回登录；登录接口自身的 401 只作为账号密码错误显示。
     if (response.status === 401 && path !== '/auth/login') {
       clearToken()
       window.dispatchEvent(new Event('life1000:unauthorized'))

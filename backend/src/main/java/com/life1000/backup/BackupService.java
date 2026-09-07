@@ -30,6 +30,7 @@ public class BackupService {
             }
         }
     }
+    // 同次导出的业务表读取使用可重复读快照；父事项、附件按统一顺序加共享锁，阻止导出中被删除。
     @Transactional(isolation=Isolation.REPEATABLE_READ,rollbackFor=IOException.class)
     public Export create() throws IOException {
         // Parent-first locks protect committed immutable attachment files until the ZIP is complete.
@@ -66,8 +67,10 @@ public class BackupService {
                     String safe=original.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]","_").replaceAll("[. ]+$","");
                     if(safe.isBlank()) safe="attachment";
                     safe=safe.codePoints().limit(100).collect(StringBuilder::new,StringBuilder::appendCodePoint,StringBuilder::append).toString();
+                    // 编号与附件 id 构成稳定唯一前缀；export_file 将 JSON 元数据与 ZIP 条目对应起来。
                     String entry=(image?"images/":"documents/")+"%03d_%d_".formatted(slot,id)+safe;
                     String path=String.valueOf(attachment.get("file_path"));
+                    // 先确认整个文件能复制到临时区，再写 ZIP；缺失文件保留元数据并写入说明，不输出半个条目。
                     Path staging=directory.resolve("attachment-"+id);
                     try {
                         if(!path.matches("goals/[0-9]{3,4}/[a-fA-F0-9-]{36}")) throw new IOException("Unsafe attachment path");

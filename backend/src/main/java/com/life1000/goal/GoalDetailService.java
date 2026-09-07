@@ -87,6 +87,7 @@ public class GoalDetailService {
         if(value==null || !Set.of("GENERAL","PROCESS","COMPLETION").contains(value.getStage())) throw ApiException.notFound("附件不存在");
         return value;
     }
+    // PROCESS 必须关联本事项的过程记录；GENERAL 与 COMPLETION 不挂记录，后者须先保存完成档案。
     public GoalAttachment upload(int slot, Long recordId, String stage, MultipartFile file) throws IOException {
         var parent=goal(slot);
         if (!Set.of("GENERAL","PROCESS","COMPLETION").contains(stage) || ("PROCESS".equals(stage) != (recordId != null)))
@@ -113,6 +114,7 @@ public class GoalDetailService {
             case "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             default -> "application/octet-stream";
         };
+        // 不信任扩展名或客户端 MIME 来决定内联展示；只让可识别的位图作为图片，避免执行主动内容。
         // Only actual raster images supported by ImageIO are served inline. SVG/HTML remain downloads.
         try(var input=ImageIO.createImageInputStream(files.resolve(path).toFile())) {
             var readers=ImageIO.getImageReaders(input);
@@ -136,6 +138,8 @@ public class GoalDetailService {
         cleanup.prepare(List.of(value));
         attachments.deleteById(id); // FK clears any explicit cover.
     }
+    // 优先使用本事项指定图片，否则取最近上传图片；同一时间按 id 稳定排序，无图则返回空。
+    // 删除显式封面时由外键 SET NULL 清除引用，随后自然使用此回退规则。
     public GoalAttachment cover(int slot) {
         var parent=goal(slot);
         if(parent.getCoverAttachmentId()!=null) {

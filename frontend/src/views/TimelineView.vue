@@ -4,6 +4,7 @@ import { readTimeline, readYear, type TimelineYear, type TimelineEntry } from '.
 import { errorMessage } from '../api/http'
 import { formatSlot } from '../goals/slots'
 const years = ref<TimelineYear[]>([])
+// 默认只展开当前年，其余年份按需查询；重新展开时再取数据，避免长期使用旧的完成日期。
 const open = ref(new Set<number>([new Date().getFullYear()]))
 const entries = ref<Record<number, TimelineEntry[]>>({})
 const errors = ref<Record<number, string>>({})

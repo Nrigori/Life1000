@@ -29,6 +29,8 @@ public class LifeGoalService {
         this.cleanup = cleanup; this.completions = completions;
     }
 
+    // slotNo 是永久位置而非列表序号：没有记录即为空白，删除后其他编号不会补位。
+    // 应用层校验负责友好提示；数据库的范围 CHECK 和唯一键仍是并发写入的最终约束。
     public static void validateSlot(int slotNo) {
         if (slotNo < 1 || slotNo > 1000) throw ApiException.badRequest("编号必须为 1～1000");
     }
@@ -101,6 +103,7 @@ public class LifeGoalService {
         return get(slotNo);
     }
 
+    // 完成与撤销必须经过完成档案事务，基础编辑接口不能只改状态而留下不一致的档案。
     private static void validateStatusChange(LifeGoal goal, GoalStatus status) {
         if (status == GoalStatus.COMPLETED
                 || (goal.getStatus() == GoalStatus.COMPLETED && status != null)) {
@@ -131,6 +134,7 @@ public class LifeGoalService {
         return get(slotNo);
     }
 
+    // 外键级联清理事项关联数据；物理附件先登记清理标记，不能在数据库提交前直接删除。
     @Transactional(rollbackFor = java.io.IOException.class) public void delete(int slotNo) throws java.io.IOException {
         validateSlot(slotNo);
         var parent = mapper.selectOne(new LambdaQueryWrapper<LifeGoal>().eq(LifeGoal::getSlotNo, slotNo).last("FOR UPDATE"));

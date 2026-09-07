@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service @Profile("mysql")
 public class SettingsService {
+    // 通用设置入口和备份共用白名单，不允许将任意系统配置或私密凭据当业务设置读写。
     public static final Set<String> KEYS=Set.of("HOME_BACKGROUND_MODE","HOME_FIXED_BACKGROUND_PATH");
     public record Image(long attachmentId,int slotNo,String originalName,String filePath,boolean allowHomeBackground,boolean fixed) {}
     public record Usage(long imageCount,long documentCount,long totalBytes) {}
@@ -38,6 +39,7 @@ public class SettingsService {
             try { if(!Files.isRegularFile(files.resolve(path))) fixed=null; }
             catch(IOException | RuntimeException e) { fixed=null; }
         }
+        // 占用按有效附件元数据求和，不递归扫描磁盘；物理文件缺失时仍保留这一逻辑统计口径。
         Usage usage=jdbc.queryForObject("""
             SELECT COALESCE(SUM(is_image=TRUE),0),COALESCE(SUM(is_image=FALSE),0),COALESCE(SUM(file_size),0)
             FROM goal_attachment

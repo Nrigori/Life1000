@@ -20,6 +20,7 @@ const loaded = ref(false)
 const error = ref('')
 let alive = true
 onBeforeUnmount(() => { alive = false })
+// 撤销后的档案和证明会保留并重新载入；再次完成默认今天，只有编辑现有档案才沿用原完成日期。
 async function load() {
   loading.value = true; error.value = ''
   try {
@@ -38,6 +39,7 @@ function choose(event: Event) {
   const input = event.target as HTMLInputElement
   selected.value.push(...(input.files || [])); input.value = ''
 }
+// 快速入口与详情入口共用提交逻辑，证明随档案一次发送；后端确认保存后才通知页面刷新完成状态。
 async function submit() {
   if (busy.value || loading.value || !loaded.value) return
   if (!date.value) { error.value = '请填写完成日期。'; return }

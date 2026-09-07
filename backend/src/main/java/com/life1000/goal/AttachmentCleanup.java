@@ -24,6 +24,7 @@ public class AttachmentCleanup {
     public AttachmentCleanup(LocalFiles files, GoalAttachmentMapper attachments, com.life1000.mapper.AppSettingMapper settings) {
         this.files = files; this.attachments = attachments; this.settings = settings;
     }
+    // 数据库事务无法回滚磁盘删除：先持久化待清理标记，提交后再按数据库是否仍引用文件决定删除。
     public void prepare(List<GoalAttachment> values) throws IOException {
         for (var value : values) settings.clearFixed(value.getFilePath());
         var markers = new ArrayList<Path>();
@@ -53,6 +54,7 @@ public class AttachmentCleanup {
             }
         });
     }
+    // 标记可跨重启保留；上传尚未结束时跳过，已提交的上传只移除标记，失败清理留待下次重试。
     @Scheduled(fixedDelay = 60000, initialDelay = 60000)
     public synchronized void retry() {
         try {

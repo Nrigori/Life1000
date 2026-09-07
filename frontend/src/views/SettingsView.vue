@@ -34,11 +34,13 @@ async function change(values:Record<string,string|null>) {
   catch(cause){error.value=errorMessage(cause)}
   finally{busy.value=false}
 }
+// 控件以服务端确认的设置为准，保存失败时恢复已持久化选项，避免 UI 显示未生效的模式。
 async function mode(event:Event,value:string) {
   const fieldset=(event.target as HTMLInputElement).closest("fieldset")!
   await change({HOME_BACKGROUND_MODE:value})
   fieldset.querySelectorAll<HTMLInputElement>("input").forEach(input=>{input.checked=input.value===settings.value?.mode})
 }
+// 随机候选标记与固定背景选择互相独立；关闭随机资格不会取消该图片的固定背景身份。
 async function candidate(image:BackgroundImage,event:Event) {
   const input=event.target as HTMLInputElement
   if(busy.value) return

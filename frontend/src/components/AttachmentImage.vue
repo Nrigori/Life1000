@@ -5,6 +5,7 @@ const props = defineProps<{ id: number; alt: string }>()
 const url = ref('')
 const failed = ref(false)
 let controller: AbortController | undefined
+// 图片需先携带 JWT 获取 Blob，不能把 Token 放入图片 URL；换图或卸载时取消请求并释放对象 URL。
 function clear() {
   controller?.abort()
   if (url.value) URL.revokeObjectURL(url.value)

@@ -23,6 +23,7 @@ const filtered = computed(() => Boolean(filters.keyword.trim() || filters.catego
 const categories = ref<Category[]>([])
 const records = ref<LifeGoal[]>([])
 const rows = computed(() => makeRows(records.value, filtered.value))
+// 数据位置完整保留，只分批增加 DOM 数量；连续滚动不会改变编号，也不需要后台分页 UI。
 const visibleCount = ref(RENDER_BATCH)
 const visibleRows = computed(() => rows.value.slice(0, visibleCount.value))
 const categoryNames = computed(() => new Map(categories.value.map(item => [item.id, item.name])))
@@ -35,6 +36,7 @@ let controller: AbortController | undefined
 let revision = 0
 let timer: ReturnType<typeof setTimeout> | undefined
 
+// 取消请求减少无用工作，revision 再兜底拒绝旧响应，防止较慢的搜索覆盖较新的筛选结果。
 async function load() {
   const current = ++revision
   controller?.abort()
@@ -58,6 +60,7 @@ async function load() {
   }
 }
 
+// 输入变化时立即作废旧请求，再延迟查询；不能等防抖结束后才阻止旧响应更新页面。
 watch(filters, () => {
   clearTimeout(timer)
   ++revision
