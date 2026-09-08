@@ -11,6 +11,8 @@ import CompletionDialog from '../components/CompletionDialog.vue'
 import CompletionFeedback from '../components/CompletionFeedback.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import AttachmentImage from '../components/AttachmentImage.vue'
+import AttachmentPreviewDialog from '../components/AttachmentPreviewDialog.vue'
+import { previewKind } from '../attachments/preview'
 import '../styles/detail.css'
 
 const route = useRoute()
@@ -236,8 +238,8 @@ watch(() => route.params.slotNo, load, { immediate: true })
             </div>
             <p class="prose">{{ record.content }}</p>
             <div class="record-files">
-              <button v-for="file in recordFiles(record.id)" :key="file.id" :disabled="busy" @click="file.isImage ? preview = file : run(() => downloadFile(file))">
-                <AttachmentImage v-if="file.isImage" :id="file.id" :alt="file.originalName" />{{ file.originalName }}
+              <button v-for="file in recordFiles(record.id)" :key="file.id" :disabled="busy" @click="previewKind(file) ? preview = file : run(() => downloadFile(file))">
+                <AttachmentImage v-if="file.isImage" :id="file.id" :alt="file.originalName" />{{ file.originalName }}<span v-if="previewKind(file)"> · 预览</span>
               </button>
             </div>
             <label class="upload-button">添加记录附件<input type="file" multiple :disabled="busy" :aria-label="'添加记录附件 ' + record.recordDate" @change="uploadFiles($event, record.id)" /></label>
@@ -255,7 +257,7 @@ watch(() => route.params.slotNo, load, { immediate: true })
             <div v-else class="document-symbol" aria-hidden="true">▤</div>
             <h3>{{ file.originalName }}</h3>
             <p class="quiet">{{ file.originalName.split('.').pop()?.toUpperCase() }} · {{ fileSize(file.fileSize) }} · {{ file.stage === 'PROCESS' ? '过程记录' : file.stage === 'COMPLETION' ? '完成证明' : '事项附件' }}</p>
-            <div class="row-actions"><button :disabled="busy" @click="run(() => downloadFile(file))">下载</button><button :disabled="busy" @click="confirmDelete('删除附件？', file.originalName + ' 将从记录册与磁盘中删除。', '/attachments/' + file.id)">删除附件</button></div>
+            <div class="row-actions"><button v-if="previewKind(file)" :disabled="busy" @click="preview = file">预览</button><button :disabled="busy" @click="run(() => downloadFile(file))">下载</button><button :disabled="busy" @click="confirmDelete('删除附件？', file.originalName + ' 将从记录册与磁盘中删除。', '/attachments/' + file.id)">删除附件</button></div>
             <template v-if="file.isImage">
               <button :disabled="busy || goal.coverAttachmentId === file.id" @click="setCover(file)">{{ goal.coverAttachmentId === file.id ? '已选为封面' : '设为封面' }}</button>
               <label class="background-option"><input type="checkbox" :checked="file.allowHomeBackground" :disabled="busy" @change="setBackground(file, $event)" />允许作为首页背景</label>
@@ -271,8 +273,8 @@ watch(() => route.params.slotNo, load, { immediate: true })
           <p v-if="completion.rating" class="archive-rating" :aria-label="completion.rating + ' 星'">{{ '★'.repeat(completion.rating) }}</p>
         </template>
         <div v-if="proofs.length" class="record-files">
-          <button v-for="file in proofs" :key="file.id" @click="file.isImage ? preview = file : run(() => downloadFile(file))">
-            <AttachmentImage v-if="file.isImage" :id="file.id" :alt="file.originalName" />{{ file.originalName }}
+          <button v-for="file in proofs" :key="file.id" @click="previewKind(file) ? preview = file : run(() => downloadFile(file))">
+            <AttachmentImage v-if="file.isImage" :id="file.id" :alt="file.originalName" />{{ file.originalName }}<span v-if="previewKind(file)"> · 预览</span>
           </button>
         </div>
       </section>
@@ -295,8 +297,6 @@ watch(() => route.params.slotNo, load, { immediate: true })
       <p>{{ confirmation.message }}</p><p v-if="error" class="form-error" role="alert">{{ error }}</p>
       <div class="dialog-actions"><button autofocus :disabled="busy" @click="confirmation = undefined">取消</button><button class="ink-button" :disabled="busy" @click="run(confirmation.action)">{{ confirmation.title.startsWith('清空') ? '确认清空' : confirmation.title.startsWith('撤销') ? '确认撤销' : '确认删除' }}</button></div>
     </ModalDialog>
-    <ModalDialog v-if="preview" class="image-dialog" :title="preview.originalName" @close="preview = undefined">
-      <AttachmentImage :id="preview.id" :alt="preview.originalName" /><div class="dialog-actions"><button autofocus @click="preview = undefined">关闭预览</button></div>
-    </ModalDialog>
+    <AttachmentPreviewDialog v-if="preview" :file="preview" @close="preview = undefined" />
   </article>
 </template>

@@ -46,12 +46,28 @@ public class GoalDetailController {
     public record BackgroundInput(@NotNull Boolean allowed) {}
     @PutMapping("/attachments/{id}/home-background")
     public GoalAttachment background(@PathVariable long id,@Valid @RequestBody BackgroundInput input) { return service.homeBackground(id,input.allowed()); }
+    // 白名单类型可以内联读取；扩展名兼容旧记录的通用 MIME，不修改原附件元数据。
+    private static String previewMime(GoalAttachment value) {
+        String mime = value.getMimeType().split(";")[0].strip().toLowerCase(java.util.Locale.ROOT);
+        String name = value.getOriginalName().toLowerCase(java.util.Locale.ROOT);
+        String extension = name.substring(name.lastIndexOf('.') + 1);
+        var images = java.util.Map.of("jpg","image/jpeg","jpeg","image/jpeg","png","image/png",
+                "webp","image/webp","gif","image/gif","bmp","image/bmp");
+        if (images.containsValue(mime)) return mime;
+        if (images.containsKey(extension)) return images.get(extension);
+        if (extension.equals("md") || mime.equals("text/markdown")) return "text/markdown;charset=UTF-8";
+        if (extension.equals("txt") || mime.equals("text/plain")) return "text/plain;charset=UTF-8";
+        if (extension.equals("pdf") || mime.equals("application/pdf")) return "application/pdf";
+        return null;
+    }
+
     @GetMapping("/attachments/{id}/content")
     public ResponseEntity<FileSystemResource> content(@PathVariable long id,@RequestParam(defaultValue="false") boolean download) throws IOException {
         var value=service.attachment(id); var path=files.resolve(value.getFilePath());
         if(!Files.isRegularFile(path)) throw com.life1000.common.ApiException.notFound("附件文件不存在");
-        var disposition=(Boolean.TRUE.equals(value.getIsImage()) && !download)?ContentDisposition.inline():ContentDisposition.attachment();
-        return ResponseEntity.ok().contentType(MediaType.parseMediaType(value.getMimeType()))
+        String previewType=previewMime(value);
+        var disposition=(previewType!=null && !download)?ContentDisposition.inline():ContentDisposition.attachment();
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(previewType == null ? value.getMimeType() : previewType))
                 .contentLength(value.getFileSize()).cacheControl(CacheControl.noStore())
                 .header("X-Content-Type-Options","nosniff")
                 .header(HttpHeaders.CONTENT_DISPOSITION,disposition.filename(value.getOriginalName(),StandardCharsets.UTF_8).build().toString())

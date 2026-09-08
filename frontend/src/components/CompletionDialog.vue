@@ -7,6 +7,9 @@ import { errorMessage } from '../api/http'
 import { formatSlot } from '../goals/slots'
 import ModalDialog from './ModalDialog.vue'
 import AttachmentImage from './AttachmentImage.vue'
+import AttachmentPreviewDialog from './AttachmentPreviewDialog.vue'
+import { previewKind } from '../attachments/preview'
+const preview = ref<Attachment>()
 const props = defineProps<{ goal: LifeGoal; editing?: boolean }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
 const date = ref(localToday())
@@ -74,11 +77,12 @@ onMounted(load)
         <li v-for="(file, index) in selected" :key="index">{{ file.name }} · {{ fileSize(file.size) }}<button type="button" :disabled="busy" :aria-label="'移除 ' + file.name" @click="selected.splice(index, 1)">移除</button></li>
       </ul>
       <div v-if="existing.length" class="retained-proofs"><p class="quiet">已保留的完成证明</p>
-        <div v-for="file in existing" :key="file.id"><AttachmentImage v-if="file.isImage" :id="file.id" :alt="file.originalName" /><span>{{ file.originalName }}</span></div>
+        <div v-for="file in existing" :key="file.id"><AttachmentImage v-if="file.isImage" :id="file.id" :alt="file.originalName" /><span>{{ file.originalName }}</span><button v-if="previewKind(file)" type="button" @click="preview = file">预览</button></div>
       </div>
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
       <div class="dialog-actions"><button type="button" :disabled="busy" @click="emit('close')">取消</button><button class="ink-button" :disabled="busy">{{ busy ? '正在保存…' : editing ? '保存完成档案' : '确认完成' }}</button></div>
     </form>
+    <AttachmentPreviewDialog v-if="preview" :file="preview" @close="preview = undefined" />
   </ModalDialog>
 </template>
 <style>
