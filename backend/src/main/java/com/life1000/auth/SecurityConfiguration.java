@@ -68,7 +68,11 @@ public class SecurityConfiguration {
     // 使用显式 Bearer 请求头而非 Cookie 会话；禁用 CSRF 依赖这个前提。
     // 除登录外，健康检查与附件读取同样要求 JWT；静态页面由 Nginx 提供。
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http,
+            org.springframework.beans.factory.ObjectProvider<DesktopCorsConfiguration> desktopCors) throws Exception {
+        if (desktopCors.getIfAvailable() != null) {
+            http.cors(cors -> cors.configurationSource(desktopCors.getObject().desktopCorsConfigurationSource()));
+        }
         return http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

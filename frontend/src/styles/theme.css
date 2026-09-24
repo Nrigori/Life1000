@@ -84,3 +84,6 @@ button, a { transition: color 120ms ease, border-color 120ms ease, background-co
   button, a { transition: none; }
   .app-shell main > * { animation: none; }
 }
+
+.desktop-startup { max-width: 600px; margin: 20vh auto; padding: 24px; }
+.desktop-startup p { white-space: pre-wrap; line-height: 1.8; }

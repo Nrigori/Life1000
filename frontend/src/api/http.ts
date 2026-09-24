@@ -1,3 +1,4 @@
+import { apiBase } from '../desktop'
 import { clearToken, getToken } from './session'
 
 export class ApiError extends Error {
@@ -11,8 +12,8 @@ export async function fetchApi(path: string, options: RequestInit = {}): Promise
   const token = getToken()
   if (token && path !== '/auth/login') headers.set('Authorization', `Bearer ${token}`)
   if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
-  // 相对 /api 同时适配开发代理和生产同源 Nginx；FormData 的边界由浏览器生成，不能手填 JSON 类型。
-  const response = await fetch(`/api${path}`, {
+  // Web 使用同源代理，Desktop 使用回环 API；FormData 的边界由浏览器生成。
+  const response = await fetch(`${apiBase()}${path}`, {
     ...options,
     headers,
     signal: options.signal

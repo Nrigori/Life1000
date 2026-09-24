@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-start-backend"
+description = "Start the owned Life1000 backend using private local configuration."
+commands.allow = ["start_backend"]

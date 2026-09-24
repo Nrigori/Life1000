@@ -15,3 +15,7 @@ uploads/
 
 /local-config.ps1
 /.local-runtime/
+
+/desktop-local-config.json
+/desktop/src-tauri/resources/*.jar
+/desktop/src-tauri/gen/schemas/

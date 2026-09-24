@@ -238,3 +238,11 @@ Life1000 的核心并不是「完成 1000 个任务」。
 它更像一本长期保存的人生手册：
 
 > 想做的事可以慢慢写，过程可以慢慢记录，完成之后，它就成为回忆。
+
+## Windows 桌面版
+
+Windows Desktop 版使用 Tauri 2 内嵌现有 Vue 生产文件，并管理 Spring Boot 子进程。完成首次配置后，双击 Life1000 即可使用，无需 Nginx 或外部浏览器。现有 Web 版和本地运行脚本继续保留。
+
+当前 Desktop V1 仍需本机 Java 21+、MySQL 和 WebView2。首次运行须配置 `%LOCALAPPDATA%\Life1000\desktop-local-config.json`，填入本机私有配置并指向原有附件目录；真实配置不得提交 Git。
+
+构建、私有配置和验收方式见 [桌面运行说明](docs/DESKTOP-RUN.md)。Web 版运行方式保持不变。

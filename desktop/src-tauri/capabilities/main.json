@@ -1,0 +1,10 @@
+{
+  "identifier": "main",
+  "description": "仅主窗口可启动本实例后端；不授予前端 shell 或任意文件访问权限。",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "allow-start-backend"
+  ]
+}
