@@ -4,12 +4,14 @@ import { navigation } from '../router'
 import { calendar } from '../home/calendar'
 import { randomBackground, randomQuote, readStats, type Quote, type Stats } from '../api/home'
 import { fileBlob } from '../api/details'
+import { isDesktop } from '../desktop'
 const background = ref('')
 const quote = ref<Quote>()
 const stats = ref<Stats>()
 const today = ref(calendar(new Date()))
 const errors = ref<string[]>([])
 const loading = ref(true)
+const desktop = isDesktop()
 let controller: AbortController | undefined
 let revision = 0
 let midnight: ReturnType<typeof setTimeout>
@@ -58,7 +60,7 @@ onBeforeUnmount(() => { ++revision; controller?.abort(); clearTimeout(midnight);
   <div class="home-cover" :class="{ 'with-photo': background }">
     <img v-if="background" class="home-photo" :src="background" alt="" />
     <div v-if="background" class="home-shade" aria-hidden="true" />
-    <header class="home-header"><nav aria-label="主导航">
+    <header v-if="!desktop" class="home-header"><nav aria-label="主导航">
       <RouterLink v-for="item in navigation" :key="item.path" :to="item.path">{{ item.title }}</RouterLink>
     </nav></header>
     <main id="main-content" class="home-body">
@@ -82,6 +84,9 @@ onBeforeUnmount(() => { ++revision; controller?.abort(); clearTimeout(midnight);
 .home-photo { object-fit: cover; }
 .home-shade { z-index: -1; background: linear-gradient(180deg, #241e185e 0%, #241e183d 50%, #241e1873 100%); }
 .home-cover.with-photo { color: #fff5e7; text-shadow: 0 1px 6px #17100c80; }
+.desktop-app .home-cover { min-height: 100svh; height: 100svh; }
+.desktop-app .home-body { padding-top: calc(var(--desktop-titlebar-height) + 4vh); }
+.desktop-app .home-footer { padding-bottom: 5vh; }
 .home-header { padding: 38px 5vw; }
 .home-header nav { justify-content: flex-end; gap: 34px; color: inherit; }
 .home-header a { opacity: .76; padding: 7px 0; border-bottom: 1px solid transparent; }
@@ -113,4 +118,8 @@ onBeforeUnmount(() => { ++revision; controller?.abort(); clearTimeout(midnight);
  .home-counts { text-align: right; } .home-year { grid-column: 1/-1; justify-self: stretch; width: 100%; }
 }
 @media (max-height: 600px) { .home-header { padding-top: 16px; padding-bottom: 16px; } .home-body h1 { font-size: 44px; margin-bottom: 18px; } }
+@media (max-height: 760px) {
+ .desktop-app .home-body { padding-top: calc(var(--desktop-titlebar-height) + 2vh); padding-bottom: 4vh; }
+ .desktop-app .home-footer { padding-bottom: 4vh; }
+}
 </style>

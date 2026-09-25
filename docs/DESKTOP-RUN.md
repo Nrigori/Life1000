@@ -2,6 +2,27 @@
 
 桌面版是现有 V1 的新入口：Tauri 2 / WebView2 内嵌 Vue production build，启动自己管理的 Spring Boot jar，再连接原有 MySQL 和本地附件目录。没有 Nginx、Vite 开发服务器或外部浏览器，也没有新业务表、接口或附件存储格式。Web 版的三个 local 脚本保持可用。
 
+## Desktop 1.1 窗口
+
+Desktop 1.1 关闭 Windows 默认标题栏，使用 Life1000 自定义顶栏整合 LIFE / 1000、五个一级导航和最小化、最大化/还原、关闭按钮。顶栏空白区域可拖动，双击该区域切换最大化；导航、按钮和页面表单不属于拖动区域。
+
+首页照片从窗口最顶部开始铺设，自定义顶栏叠在照片上；有照片时使用暖深色低透明玻璃，无照片和普通页面使用暖米白玻璃。内容卡片、详情正文、时间轴、统计和设置继续使用原有纸张背景。
+
+窗口大小、位置和最大化状态由 Tauri 官方 window-state 插件保存到：
+
+```text
+%APPDATA%\com.life1000.desktop\.window-state.json
+```
+
+该文件只包含窗口几何状态，不包含账号、数据库、附件或业务数据。恢复失败时仍使用代码中的主显示器默认尺寸。
+
+Desktop 1.1 是 1.0 的原位升级：`productName` 仍为 `Life1000`，bundle identifier 仍为 `com.life1000.desktop`，只将版本提升为 `1.1.0`。NSIS 使用相同应用身份覆盖安装目录，不管理也不会删除以下外部数据：
+
+- `%LOCALAPPDATA%\Life1000\desktop-local-config.json`
+- MySQL 数据库
+- `LIFE1000_UPLOAD_DIRECTORY` 指向的附件
+- 用户其他本地目录
+
 ## 运行前准备
 
 - Windows 10/11 x64，Microsoft Edge WebView2 Runtime。
@@ -65,7 +86,7 @@ notepad (Join-Path $directory 'desktop-local-config.json')
 frontend/dist/
 backend/target/life1000-backend-0.0.1-SNAPSHOT.jar
 desktop/src-tauri/target/release/Life1000.exe
-desktop/src-tauri/target/release/bundle/nsis/Life1000_1.0.0_x64-setup.exe
+desktop/src-tauri/target/release/bundle/nsis/Life1000_1.1.0_x64-setup.exe
 ```
 
 推荐运行 NSIS 安装包。安装后的 exe 旁边有 `backend/life1000-backend.jar`，由安装器一并安装；不能只复制裸 exe 而遗漏 jar。前端资源已嵌入 exe。构建目录中的 exe 同样依赖同目录的 backend 资源。更新后端必须重新构建安装包。
@@ -117,7 +138,22 @@ npm --prefix desktop run build
 
 本次构建与测试的实际执行结果见下面的验证记录。未执行的桌面操作不得视为已经通过。
 
-## 本次验证记录（2026-09-24）
+## Desktop 1.1 验证记录（2026-09-25）
+
+| 验证范围 | 结果与边界 |
+| --- | --- |
+| Vue production build | 通过 |
+| 前端 Playwright | 38 项通过，含启动期标题栏、窗口按钮、拖动区和导航点击隔离 |
+| 1366×768 页面布局 | 首页、人生千事、详情、时间轴、设置已截图检查；首页照片从 y=0 铺满，人生千事 sticky 工具栏滚动后停在 52px 标题栏下 |
+| Maven verify | 92 项中 84 项通过、8 项真实 MySQL 测试按条件跳过；构建通过 |
+| Rust / Tauri 测试 | 6 项通过；1 项需专用数据库配置的真实 Java 测试默认 ignored |
+| Tauri release / NSIS | 通过，生成 `Life1000_1.1.0_x64-setup.exe` |
+| 原生业务链路 | 专用 `life1000_test` 通过登录、第二实例、分类、事项、附件与预览、完成、时间轴、设置、ZIP 导出、关闭清理和再次启动 |
+| 原生窗口控制 | 最小化、最大化、还原、关闭、第二实例唤醒和最大化状态恢复通过；真实拖动、双击最大化及导航点击隔离已完成人工验收 |
+| Web 本地脚本 | 39 项检查通过；没有连接真实 MySQL 或启动浏览器 |
+| 安装/覆盖升级 | 安装包已生成且应用身份保持不变；Desktop 1.1 人工安装、启动以及功能和视觉验收通过 |
+
+## Desktop 1.0 验证记录（2026-09-24）
 
 | 验证范围 | 结果与边界 |
 | --- | --- |

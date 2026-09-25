@@ -5,6 +5,7 @@ mod runtime;
 
 use std::sync::Arc;
 use tauri::{webview::DownloadEvent, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_window_state::StateFlags;
 
 #[tauri::command]
 async fn start_backend(
@@ -30,6 +31,11 @@ fn main() {
                 let _ = window.set_focus();
             }
         }))
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
+                .build(),
+        )
         .manage(Arc::new(runtime::Runtime::default()))
         .invoke_handler(tauri::generate_handler![start_backend])
         .setup(|app| {
@@ -48,6 +54,8 @@ fn main() {
                 .unwrap_or((1280.0, 800.0));
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Life1000")
+                .decorations(false)
+                .shadow(true)
                 .inner_size(width.max(900.0), height.max(600.0))
                 .center()
                 .min_inner_size(900.0, 600.0)

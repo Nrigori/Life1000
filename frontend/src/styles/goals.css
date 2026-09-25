@@ -6,6 +6,16 @@
 .goals-heading p { color: var(--muted); font-size: 13px; letter-spacing: .06em; }
 .goals-heading p span { margin-left: 10px; letter-spacing: .02em; }
 .goals-toolbar { display: flex; gap: 16px; align-items: center; position: sticky; top: 0; z-index: 3; background: #f3ebdd; padding: 14px 0 18px; border-bottom: 1px solid var(--line); margin-bottom: 24px; }
+.desktop-app .goals-toolbar {
+  top: var(--desktop-titlebar-height);
+  background: rgba(243, 235, 221, .92);
+  border-bottom-color: rgba(128, 99, 68, .19);
+  backdrop-filter: blur(10px) saturate(106%);
+  -webkit-backdrop-filter: blur(10px) saturate(106%);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .desktop-app .goals-toolbar { background: #f3ebdd; }
+}
 .search-field { display: flex; align-items: center; gap: 10px; flex: 1; border-bottom: 1px solid #bfae98; }
 .search-field > span[aria-hidden] { color: var(--muted); font-size: 26px; }
 .search-field input { border: 0; background: transparent; padding-left: 0; }
