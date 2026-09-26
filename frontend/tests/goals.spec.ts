@@ -52,6 +52,19 @@ async function mockApi(page: Page, authenticated = true) {
       await route.fulfill({ json: [...goals.values()].filter(item =>
         item.title.includes(keyword) && (!categoryId || item.categoryId === Number(categoryId))
         && (!status || item.status === status)).sort((a, b) => a.slotNo - b.slotNo) })
+    } else if (/^\/api\/goals\/\d+\/status$/.test(path)) {
+      const slot = Number(path.split('/')[3])
+      const current = goals.get(slot)
+      const body = req.postDataJSON()
+      expect(req.method()).toBe('PUT')
+      expect(['NOT_STARTED', 'IN_PROGRESS']).toContain(body.status)
+      if (!current || current.status === 'COMPLETED') {
+        await route.fulfill({ status: 400, json: { message: '基础接口不能完成或撤销完成事项' } })
+      } else {
+        const updated = { ...current, status: body.status }
+        goals.set(slot, updated)
+        await route.fulfill({ json: updated })
+      }
     } else if (/^\/api\/goals\/\d+$/.test(path)) {
       const slot = Number(path.split('/').at(-1))
       if (req.method() === 'POST') {
@@ -179,6 +192,74 @@ test('search, category and all three status filters keep original numbers in bot
   await page.getByRole('button', { name: '清除筛选' }).click()
   await page.getByRole('button', { name: '卡片', exact: true }).click()
   await expect(tile(page, 1)).toContainText('尚未写下')
+})
+
+test('card and list status controls switch only active states without opening details', async ({ page }) => {
+  const api = await mockApi(page)
+  await page.goto('/goals')
+  const cardStatus = tile(page, 27).getByLabel('第 027 件状态')
+  await expect(cardStatus).toHaveValue('NOT_STARTED')
+  await cardStatus.selectOption('IN_PROGRESS')
+  await expect(cardStatus).toHaveValue('IN_PROGRESS')
+  await expect(page).toHaveURL(/\/goals$/)
+  expect(api.goals.get(27)?.status).toBe('IN_PROGRESS')
+
+  await page.getByRole('button', { name: '列表', exact: true }).click()
+  const listStatus = tile(page, 3).getByLabel('第 003 件状态')
+  await listStatus.selectOption('NOT_STARTED')
+  await expect(listStatus).toHaveValue('NOT_STARTED')
+  await expect(page).toHaveURL(/\/goals$/)
+  expect(api.goals.get(3)?.status).toBe('NOT_STARTED')
+
+  await page.getByLabel('状态筛选').selectOption('COMPLETED')
+  await expect(tile(page, 118)).toBeVisible()
+  await expect(tile(page, 118).locator('select')).toHaveCount(0)
+  await expect(tile(page, 118)).toContainText('已完成')
+})
+
+test('file drops cannot navigate away outside the detail upload page', async ({ page }) => {
+  await mockApi(page)
+  await page.goto('/goals')
+  await expect(tile(page, 27)).toBeVisible()
+  const prevented = await page.evaluate(() => {
+    const file = new File(['image'], 'photo.png', { type: 'image/png' })
+    const transfer = { types: ['Files'], files: [file], items: [{ kind: 'file', getAsFile: () => file }] }
+    const event = new Event('drop', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'dataTransfer', { value: transfer })
+    return !document.body.dispatchEvent(event)
+  })
+  expect(prevented).toBe(true)
+  await expect(page).toHaveURL(/goals$/)
+  await expect(page.locator('.file-drop-overlay')).toHaveCount(0)
+})
+
+test('status filtering removes only after success and failed changes roll back in place', async ({ page }) => {
+  await mockApi(page)
+  await page.goto('/goals')
+  await page.getByLabel('状态筛选').selectOption('NOT_STARTED')
+  await expect.poll(() => numbers(page)).toEqual(['027', '406'])
+
+  let finish!: () => void
+  const pending = new Promise<void>(resolve => { finish = resolve })
+  await page.route('**/api/goals/27/status', async route => {
+    await pending
+    const updated = goal(27, '学会一首钢琴曲', 2, 'IN_PROGRESS')
+    await route.fulfill({ json: updated })
+  })
+  const status = tile(page, 27).getByLabel('第 027 件状态')
+  await status.selectOption('IN_PROGRESS')
+  await expect(status).toBeDisabled()
+  await expect(status).toHaveValue('IN_PROGRESS')
+  await expect(tile(page, 27)).toBeVisible()
+  finish()
+  await expect(tile(page, 27)).toHaveCount(0)
+
+  await page.route('**/api/goals/406/status', route => route.fulfill({ status: 503, json: { message: '稍后再试' } }))
+  const failed = tile(page, 406).getByLabel('第 406 件状态')
+  await failed.selectOption('IN_PROGRESS')
+  await expect(failed).toHaveValue('NOT_STARTED')
+  await expect(tile(page, 406)).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('第 406 件状态未能更新：稍后再试')
 })
 
 test('network errors do not turn unknown records into blank slots and retry works', async ({ page }) => {

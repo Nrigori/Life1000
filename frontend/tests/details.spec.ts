@@ -99,6 +99,26 @@ async function newRecord(page: Page) {
   await expect(page.locator('.record-list')).toContainText('开始研究路线。')
 }
 
+async function dispatchFileDrag(page: Page, names: string[], type: 'enter' | 'drop') {
+  return page.evaluate(({ names, type }) => {
+    const files = names.map(name => new File([`content of ${name}`], name, {
+      type: name.endsWith('.png') ? 'image/png' : 'application/octet-stream',
+    }))
+    const transfer = {
+      types: ['Files'],
+      files,
+      items: files.map(file => ({
+        kind: 'file',
+        getAsFile: () => file,
+        webkitGetAsEntry: () => ({ isDirectory: false }),
+      })),
+    }
+    const event = new Event(type === 'enter' ? 'dragenter' : 'drop', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'dataTransfer', { value: transfer })
+    return !document.body.dispatchEvent(event)
+  }, { names, type })
+}
+
 test('detail reads like a notebook, persists edits, optional check CRUD and record CRUD', async ({ page }) => {
   const api = await mockDetail(page)
   await page.goto('/goals/027')
@@ -193,6 +213,62 @@ test('general and process files survive reload, preview/download, cover fallback
   await page.getByRole('button', { name: '确认删除' }).click()
   await expect(page.locator('.attachment-card')).toHaveCount(1)
   await expect(page.locator('.detail-banner')).toContainText('尚无影像')
+})
+
+test('file drag overlay ignores non-files, uploads GENERAL batches and continues after one failure', async ({ page }) => {
+  const api = await mockDetail(page)
+  await page.goto('/goals/27')
+  await expect(page.getByRole('heading', { name: '独自去远方旅行' })).toBeVisible()
+
+  await page.evaluate(() => {
+    const transfer = new DataTransfer()
+    transfer.setData('text/plain', 'ordinary text')
+    document.body.dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer: transfer }))
+  })
+  await expect(page.locator('.file-drop-overlay')).toHaveCount(0)
+
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/api/goals/27/attachments', async route => {
+    if (route.request().method() === 'POST' && route.request().postDataBuffer()?.toString().includes('single.png')) {
+      await gate
+    }
+    await route.fallback()
+  })
+  await dispatchFileDrag(page, ['single.png'], 'enter')
+  await expect(page.locator('.file-drop-overlay')).toContainText('松开以添加到第 027 件')
+  expect(await dispatchFileDrag(page, ['single.png'], 'drop')).toBe(true)
+  await expect(page.getByRole('status')).toContainText('正在上传 1 / 1')
+  release()
+  await expect(page.getByText('已添加 1 个文件，0 个未能添加。')).toBeVisible()
+  await page.unroute('**/api/goals/27/attachments')
+  expect(api.files().find(file => file.originalName === 'single.png')?.stage).toBe('GENERAL')
+  await expect(page).toHaveURL(/\/goals\/27$/)
+
+  await page.route('**/api/goals/27/attachments', async route => {
+    if (route.request().method() === 'POST' && route.request().postDataBuffer()?.toString().includes('broken.txt')) {
+      await route.fulfill({ status: 503, json: { message: '这个文件暂时无法保存' } })
+    } else await route.fallback()
+  })
+  await dispatchFileDrag(page, ['notes.md', 'map.pdf', 'broken.txt'], 'drop')
+  await expect(page.getByRole('alert')).toHaveText('已添加 2 个文件，1 个未能添加。')
+  expect(api.files().filter(file => ['notes.md', 'map.pdf'].includes(file.originalName))).toHaveLength(2)
+  expect(api.files().some(file => file.originalName === 'broken.txt')).toBe(false)
+  await expect(page.locator('.attachment-card')).toHaveCount(3)
+
+  await page.evaluate(() => {
+    const transfer = {
+      types: ['Files'], files: [],
+      items: [{ kind: 'file', getAsFile: () => null, webkitGetAsEntry: () => ({ isDirectory: true }) }],
+    }
+    for (const type of ['dragenter', 'drop']) {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'dataTransfer', { value: transfer })
+      document.body.dispatchEvent(event)
+    }
+  })
+  await expect(page.locator('.file-drop-overlay')).toHaveCount(0)
+  await expect(page.getByRole('alert')).toHaveText('未添加文件夹，请拖入其中的文件。')
 })
 
 test('completed goals can edit prose without completion/undo controls; failed save retains input', async ({ page }) => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getGoal, getCategories, deleteGoal, statusLabels, type LifeGoal, type Category } from '../api/goals'
 import { errorMessage } from '../api/http'
@@ -40,6 +40,10 @@ const cover = ref<Attachment>()
 const error = ref('')
 const loading = ref(true)
 const busy = ref(false)
+const dropActive = ref(false)
+const uploadProgress = ref<{ current: number; total: number }>()
+const uploadResult = ref('')
+const uploadHasFailures = ref(false)
 const editing = ref(false)
 const more = ref(false)
 const preview = ref<Attachment>()
@@ -49,6 +53,7 @@ const recordForm = ref<{ id?: number; content: string; recordDate: string }>()
 const confirmation = ref<{ title: string; message: string; action: () => Promise<void> }>()
 const categoryName = computed(() => categories.value.find(c => c.id === goal.value?.categoryId)?.name || '不分类')
 let revision = 0
+let dragDepth = 0
 async function load() {
   const current = ++revision
   loading.value = true; error.value = ''; editing.value = false; more.value = false
@@ -144,24 +149,109 @@ function clearGoal() {
     message: '删除事项将同时删除对应记录和附件。这个编号将重新成为空白，其他编号保持原样。',
     action: async () => { await deleteGoal(goal.value!.slotNo); confirmation.value = undefined; await router.push('/goals') } }
 }
-async function uploadFiles(event: Event, recordId?: number) {
+function uploadFiles(event: Event, recordId?: number) {
   const input = event.target as HTMLInputElement
   const files = [...(input.files || [])]
-  const slot = goal.value!.slotNo
   input.value = ''
-  await run(async () => {
-    try {
-      for (const file of files) {
+  void uploadBatch(files, recordId)
+}
+async function uploadBatch(files: File[], recordId?: number, ignoredDirectories = 0) {
+  if (!goal.value || busy.value || !files.length) {
+    if (ignoredDirectories) {
+      uploadHasFailures.value = true
+      uploadResult.value = '未添加文件夹，请拖入其中的文件。'
+    }
+    return
+  }
+  const slot = goal.value.slotNo
+  let succeeded = 0
+  let failed = 0
+  busy.value = true
+  error.value = ''
+  uploadResult.value = ''
+  uploadHasFailures.value = false
+  try {
+    for (const [index, file] of files.entries()) {
+      uploadProgress.value = { current: index + 1, total: files.length }
+      try {
         if (file.size > 50 * 1024 * 1024) throw new Error('too-large')
         await upload(slot, file, recordId)
+        succeeded++
+      } catch {
+        failed++
       }
-    } catch (cause) {
-      if (cause instanceof Error && cause.message === 'too-large') {
-        error.value = '文件不能超过 50 MB。已上传的文件仍会保留。'
-      } else { error.value = errorMessage(cause) }
     }
-    await refresh()
+    if (succeeded) await refresh()
+    uploadHasFailures.value = failed > 0 || ignoredDirectories > 0
+    const folderNote = ignoredDirectories ? `，已忽略 ${ignoredDirectories} 个文件夹` : ''
+    uploadResult.value = `已添加 ${succeeded} 个文件，${failed} 个未能添加${folderNote}。`
+  } catch (cause) {
+    uploadHasFailures.value = true
+    uploadResult.value = `附件列表未能刷新：${errorMessage(cause)}`
+  } finally {
+    uploadProgress.value = undefined
+    busy.value = false
+  }
+}
+function isFileDrag(event: DragEvent) {
+  const transfer = event.dataTransfer
+  if (!transfer || !Array.from(transfer.types).includes('Files')) return false
+  return [...transfer.items].some(item => item.kind === 'file') || transfer.files.length > 0
+}
+function uploadableDragItems(transfer: DataTransfer) {
+  const items = [...transfer.items].filter(item => item.kind === 'file')
+  if (!items.length) return transfer.files.length > 0
+  return items.some(item => {
+    const entry = item.webkitGetAsEntry?.()
+    return !entry?.isDirectory
   })
+}
+function canShowDrop(transfer: DataTransfer) {
+  return Boolean(goal.value && !loading.value && !busy.value && !editing.value && !completionOpen.value
+    && !checkForm.value && !recordForm.value && !confirmation.value && !preview.value
+    && uploadableDragItems(transfer))
+}
+function dragEnter(event: DragEvent) {
+  if (!isFileDrag(event)) return
+  event.preventDefault()
+  if (!event.dataTransfer || !canShowDrop(event.dataTransfer)) return
+  dragDepth++
+  dropActive.value = true
+}
+function dragOver(event: DragEvent) {
+  if (!isFileDrag(event)) return
+  event.preventDefault()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+}
+function dragLeave(event: DragEvent) {
+  if (!isFileDrag(event) || !dropActive.value) return
+  dragDepth = Math.max(0, dragDepth - 1)
+  if (!dragDepth) {
+    dragDepth = 0
+    dropActive.value = false
+  }
+}
+function droppedFiles(transfer: DataTransfer) {
+  const files: File[] = []
+  let directories = 0
+  const items = [...transfer.items].filter(item => item.kind === 'file')
+  if (!items.length) return { files: [...transfer.files], directories }
+  for (const item of items) {
+    const entry = item.webkitGetAsEntry?.()
+    if (entry?.isDirectory) { directories++; continue }
+    const file = item.getAsFile()
+    if (file) files.push(file)
+  }
+  return { files, directories }
+}
+function drop(event: DragEvent) {
+  if (!isFileDrag(event)) return
+  event.preventDefault()
+  dragDepth = 0
+  dropActive.value = false
+  if (!event.dataTransfer || !goal.value || busy.value) return
+  const dropped = droppedFiles(event.dataTransfer)
+  void uploadBatch(dropped.files, undefined, dropped.directories)
 }
 const recordFiles = (id: number) => attachments.value.filter(file => file.recordId === id)
 function setCover(file: Attachment) {
@@ -174,10 +264,27 @@ function setBackground(file: Attachment, event: Event) {
   }).finally(() => { input.checked = attachments.value.find(value => value.id === file.id)?.allowHomeBackground ?? file.allowHomeBackground })
 }
 watch(() => route.params.slotNo, load, { immediate: true })
+onMounted(() => {
+  document.addEventListener('dragenter', dragEnter)
+  document.addEventListener('dragover', dragOver)
+  document.addEventListener('dragleave', dragLeave)
+  document.addEventListener('drop', drop)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('dragenter', dragEnter)
+  document.removeEventListener('dragover', dragOver)
+  document.removeEventListener('dragleave', dragLeave)
+  document.removeEventListener('drop', drop)
+})
 </script>
 
 <template>
   <article class="paper goal-detail">
+    <Teleport to="body">
+      <div v-if="dropActive && goal" class="file-drop-overlay" role="status" aria-live="polite">
+        <div><span aria-hidden="true">＋</span><strong>松开以添加到第 {{ formatSlot(goal.slotNo) }} 件</strong><small>文件将作为事项附件保存</small></div>
+      </div>
+    </Teleport>
     <nav class="detail-toolbar">
       <RouterLink to="/goals">← 返回人生千事</RouterLink>
       <div v-if="goal" class="detail-actions">
@@ -250,7 +357,9 @@ watch(() => route.params.slotNo, load, { immediate: true })
       <section class="detail-section">
         <div class="section-heading"><h2>全部附件</h2><label class="upload-button">上传附件<input type="file" multiple :disabled="busy" aria-label="上传普通附件" @change="uploadFiles($event)" /></label></div>
         <p class="quiet">图片与文档，都可以留在这里。每个文件最多 50 MB。</p>
-        <p v-if="busy" role="status">正在保存，请稍候…</p>
+        <p v-if="uploadProgress" class="upload-status" role="status">正在上传 {{ uploadProgress.current }} / {{ uploadProgress.total }}</p>
+        <p v-else-if="uploadResult" class="upload-status" :class="{ 'has-failures': uploadHasFailures }" :role="uploadHasFailures ? 'alert' : 'status'">{{ uploadResult }}</p>
+        <p v-else-if="busy" role="status">正在保存，请稍候…</p>
         <div class="attachment-grid">
           <article v-for="file in attachments" :key="file.id" class="attachment-card" :data-attachment="file.id">
             <button v-if="file.isImage" class="attachment-thumb" :aria-label="'预览 ' + file.originalName" @click="preview = file"><AttachmentImage :id="file.id" :alt="file.originalName" /></button>
@@ -297,6 +406,6 @@ watch(() => route.params.slotNo, load, { immediate: true })
       <p>{{ confirmation.message }}</p><p v-if="error" class="form-error" role="alert">{{ error }}</p>
       <div class="dialog-actions"><button autofocus :disabled="busy" @click="confirmation = undefined">取消</button><button class="ink-button" :disabled="busy" @click="run(confirmation.action)">{{ confirmation.title.startsWith('清空') ? '确认清空' : confirmation.title.startsWith('撤销') ? '确认撤销' : '确认删除' }}</button></div>
     </ModalDialog>
-    <AttachmentPreviewDialog v-if="preview" :file="preview" @close="preview = undefined" />
+    <AttachmentPreviewDialog v-if="preview" :file="preview" :files="attachments" @close="preview = undefined" />
   </article>
 </template>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { getCategories, getGoals, searchGoals } from '../api/goals'
-import type { Category, GoalFilters, LifeGoal } from '../api/goals'
+import { getCategories, getGoals, searchGoals, updateGoalStatus } from '../api/goals'
+import type { ActiveGoalStatus, Category, GoalFilters, LifeGoal } from '../api/goals'
 import { errorMessage } from '../api/http'
-import { makeRows, RENDER_BATCH } from '../goals/slots'
+import { formatSlot, makeRows, RENDER_BATCH } from '../goals/slots'
 import GoalTile from '../components/GoalTile.vue'
 import CompletionDialog from '../components/CompletionDialog.vue'
 import CompletionFeedback from '../components/CompletionFeedback.vue'
@@ -29,6 +29,8 @@ const visibleRows = computed(() => rows.value.slice(0, visibleCount.value))
 const categoryNames = computed(() => new Map(categories.value.map(item => [item.id, item.name])))
 const loading = ref(true)
 const error = ref('')
+const statusError = ref('')
+const statusBusy = ref<Set<number>>(new Set())
 const createSlot = ref<number | null>(null)
 const sentinel = ref<HTMLElement>()
 let observer: IntersectionObserver | undefined
@@ -88,6 +90,28 @@ function created(goal: LifeGoal) {
   records.value = [...records.value.filter(item => item.slotNo !== goal.slotNo), goal]
   createSlot.value = null
 }
+async function changeStatus(goal: LifeGoal, status: ActiveGoalStatus) {
+  if (goal.status === 'COMPLETED' || goal.status === status || statusBusy.value.has(goal.slotNo)) return
+  const original = goal
+  statusError.value = ''
+  statusBusy.value = new Set(statusBusy.value).add(goal.slotNo)
+  records.value = records.value.map(item => item.slotNo === goal.slotNo ? { ...item, status } : item)
+  try {
+    const updated = await updateGoalStatus(goal.slotNo, status)
+    records.value = records.value.map(item => item.slotNo === goal.slotNo ? updated : item)
+    // 在请求确认前保留卡片；成功后再移出不匹配的状态筛选，避免失败时消失又重现。
+    if (filters.status && updated.status !== filters.status) {
+      records.value = records.value.filter(item => item.slotNo !== goal.slotNo)
+    }
+  } catch (cause) {
+    records.value = records.value.map(item => item.slotNo === goal.slotNo ? original : item)
+    statusError.value = `第 ${formatSlot(goal.slotNo)} 件状态未能更新：${errorMessage(cause)}`
+  } finally {
+    const next = new Set(statusBusy.value)
+    next.delete(goal.slotNo)
+    statusBusy.value = next
+  }
+}
 onMounted(load)
 onBeforeUnmount(() => {
   ++revision
@@ -135,6 +159,7 @@ onBeforeUnmount(() => {
         <p role="alert">{{ error }}</p><button type="button" @click="load">重新读取</button>
       </div>
       <template v-else>
+        <p v-if="statusError" class="status-action-error" role="alert">{{ statusError }}</p>
         <div v-if="filtered" class="filter-summary">
           <span>找到 {{ rows.length }} 件事</span><button type="button" @click="clearFilters">清除筛选</button>
         </div>
@@ -142,7 +167,8 @@ onBeforeUnmount(() => {
         <ol v-else class="goals-collection" :class="view === 'cards' ? 'goals-grid' : 'goals-list'" aria-label="人生千事固定位置">
           <GoalTile v-for="row in visibleRows" :key="row.slotNo" :slot-no="row.slotNo" :goal="row.goal"
             :category-name="row.goal?.categoryId ? categoryNames.get(row.goal.categoryId) : undefined"
-            :view="view" @create="createSlot = $event" @complete="completing = $event" />
+            :view="view" :status-busy="statusBusy.has(row.slotNo)" @create="createSlot = $event"
+            @complete="completing = $event" @change-status="changeStatus" />
         </ol>
         <div v-if="visibleCount < rows.length" ref="sentinel" class="scroll-sentinel">
           <button type="button" @click="showMore">继续向下展开</button>

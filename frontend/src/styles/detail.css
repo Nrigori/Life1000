@@ -31,6 +31,14 @@
 .upload-button { position: relative; display: inline-block; cursor: pointer; border: 1px solid #d6c8b5; border-radius: 4px; padding: 7px 12px; font-size: 13px; background: #f5eddf; }
 .upload-button input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
 .upload-button:focus-within { outline: 2px solid #806344; outline-offset: 3px; }
+.upload-status { margin: 14px 0 0; color: var(--muted); font-size: 13px; }
+.upload-status.has-failures { color: #8e513f; }
+.file-drop-overlay { position: fixed; z-index: 45; inset: 0; display: grid; place-items: center; padding: 40px; pointer-events: none; color: #4b3d31; background: rgba(243, 235, 221, .74); backdrop-filter: blur(8px) saturate(105%); -webkit-backdrop-filter: blur(8px) saturate(105%); }
+.desktop-app .file-drop-overlay { top: var(--desktop-titlebar-height); }
+.file-drop-overlay > div { display: flex; min-width: min(420px, calc(100vw - 48px)); padding: 34px; flex-direction: column; align-items: center; gap: 9px; border: 1px solid rgba(128, 99, 68, .48); border-radius: 6px; background: rgba(248, 242, 231, .78); box-shadow: 0 8px 26px rgba(62, 52, 43, .08); }
+.file-drop-overlay span { font-size: 30px; color: #9a8163; }
+.file-drop-overlay strong { font: 20px/1.5 Georgia, "Songti SC", "SimSun", serif; font-weight: 400; }
+.file-drop-overlay small { color: var(--muted); }
 .attachment-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 22px; }
 .attachment-card { border: 1px solid #e0d5c6; padding: 14px; border-radius: 4px; min-width: 0; }
 .attachment-card h3 { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; margin: 12px 0 6px; }
@@ -49,3 +57,6 @@
 
 .completion-entry { text-align: center; padding-top: 34px; }
 .archive-rating { color: #947449; letter-spacing: .2em; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .file-drop-overlay { background: rgba(243, 235, 221, .94); }
+}

@@ -1,6 +1,7 @@
 import { request } from './http'
 
 export type GoalStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
+export type ActiveGoalStatus = Exclude<GoalStatus, 'COMPLETED'>
 
 export interface LifeGoal {
   id: number
@@ -61,4 +62,8 @@ export function createGoal(slotNo: number, input: GoalInput) {
 
 export function deleteGoal(slotNo: number) {
   return request<void>(`/goals/${slotNo}`, { method: 'DELETE' })
+}
+
+export function updateGoalStatus(slotNo: number, status: ActiveGoalStatus) {
+  return request<LifeGoal>(`/goals/${slotNo}/status`, { method: 'PUT', body: JSON.stringify({ status }) })
 }

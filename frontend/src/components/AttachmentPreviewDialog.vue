@@ -6,10 +6,12 @@ import { fileBlob, downloadFile, type Attachment } from '../api/details'
 import { errorMessage } from '../api/http'
 import { previewKind } from '../attachments/preview'
 import ModalDialog from './ModalDialog.vue'
+import ImageViewer from './ImageViewer.vue'
 
-const props = defineProps<{ file: Attachment }>()
+const props = defineProps<{ file: Attachment; files?: Attachment[] }>()
 const emit = defineEmits<{ close: [] }>()
 const kind = computed(() => previewKind(props.file))
+const imageFiles = computed(() => (props.files || [props.file]).filter(file => file.isImage))
 const url = ref(''), text = ref(''), html = ref(''), error = ref('')
 const loading = ref(true), downloading = ref(false)
 let controller: AbortController | undefined
@@ -25,6 +27,7 @@ watch(() => props.file, async file => {
   try {
     const type = previewKind(file)
     if (!type) return
+    if (type === 'image') { loading.value = false; return }
     const blob = await fileBlob(file.id, false, current.signal)
     if (current.signal.aborted) return
     if (type === 'markdown' || type === 'text') {
@@ -57,13 +60,13 @@ onBeforeUnmount(clear)
 </script>
 
 <template>
-  <ModalDialog class="attachment-preview-dialog" :title="file.originalName" :aria-label="file.originalName" aria-labelledby="" @close="emit('close')">
+  <ImageViewer v-if="kind === 'image'" :files="imageFiles" :initial-id="file.id" @close="emit('close')" />
+  <ModalDialog v-else class="attachment-preview-dialog" :title="file.originalName" :aria-label="file.originalName" aria-labelledby="" @close="emit('close')">
     <div class="attachment-preview-body" :aria-busy="loading">
       <p v-if="loading" role="status">正在读取附件…</p>
       <p v-else-if="!kind">该格式暂不支持在线预览。</p>
       <template v-else>
-        <img v-if="kind === 'image' && url" :src="url" :alt="file.originalName" @error="error = '图片暂时无法预览，请尝试下载。'" />
-        <iframe v-else-if="kind === 'pdf' && url" :src="url" :title="file.originalName + ' PDF 预览'" />
+        <iframe v-if="kind === 'pdf' && url" :src="url" :title="file.originalName + ' PDF 预览'" />
         <pre v-else-if="kind === 'text'" class="preview-text">{{ text }}</pre>
         <div v-else-if="kind === 'markdown'" class="preview-markdown" v-html="html" />
       </template>

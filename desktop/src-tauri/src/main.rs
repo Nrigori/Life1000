@@ -54,6 +54,8 @@ fn main() {
                 .unwrap_or((1280.0, 800.0));
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Life1000")
+                // Tauri 2.11 的原生处理器会接管 Windows WebView2 文件拖放；关闭后由页面接收标准 File 对象。
+                .disable_drag_drop_handler()
                 .decorations(false)
                 .shadow(true)
                 .inner_size(width.max(900.0), height.max(600.0))

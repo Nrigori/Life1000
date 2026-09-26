@@ -17,6 +17,7 @@ const note = ref('')
 const rating = ref<number | null>(null)
 const selected = ref<File[]>([])
 const existing = ref<Attachment[]>([])
+const allFiles = ref<Attachment[]>([])
 const loading = ref(true)
 const busy = ref(false)
 const loaded = ref(false)
@@ -34,6 +35,7 @@ async function load() {
       if (props.editing) date.value = archive.completedDate
     }
     loaded.value = true
+    allFiles.value = files
     existing.value = files.filter(file => file.stage === 'COMPLETION')
   } catch (cause) { error.value = errorMessage(cause) }
   finally { loading.value = false }
@@ -82,7 +84,7 @@ onMounted(load)
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
       <div class="dialog-actions"><button type="button" :disabled="busy" @click="emit('close')">取消</button><button class="ink-button" :disabled="busy">{{ busy ? '正在保存…' : editing ? '保存完成档案' : '确认完成' }}</button></div>
     </form>
-    <AttachmentPreviewDialog v-if="preview" :file="preview" @close="preview = undefined" />
+    <AttachmentPreviewDialog v-if="preview" :file="preview" :files="allFiles" @close="preview = undefined" />
   </ModalDialog>
 </template>
 <style>

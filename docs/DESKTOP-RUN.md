@@ -2,6 +2,12 @@
 
 桌面版是现有 V1 的新入口：Tauri 2 / WebView2 内嵌 Vue production build，启动自己管理的 Spring Boot jar，再连接原有 MySQL 和本地附件目录。没有 Nginx、Vite 开发服务器或外部浏览器，也没有新业务表、接口或附件存储格式。Web 版的三个 local 脚本保持可用。
 
+## Desktop 1.2 日常体验
+
+Desktop 1.2 增加未开始与进行中的快捷切换、事项详情文件拖拽上传，以及支持前后切换、缩放、拖动、适应窗口和原始大小的轻量图片查看器。完成状态仍只通过完成流程修改，拖入文件仍使用原有 GENERAL 附件接口，图片仍通过带 JWT 的 content API 读取。
+
+Windows WebView2 的原生拖放接管已关闭，使 Desktop 与 Web 共用标准 HTML5 文件拖放事件；没有增加文件系统权限，也不会向前端暴露附件物理路径。原有点击选择上传保持不变。
+
 ## Desktop 1.1 窗口
 
 Desktop 1.1 关闭 Windows 默认标题栏，使用 Life1000 自定义顶栏整合 LIFE / 1000、五个一级导航和最小化、最大化/还原、关闭按钮。顶栏空白区域可拖动，双击该区域切换最大化；导航、按钮和页面表单不属于拖动区域。
@@ -86,7 +92,7 @@ notepad (Join-Path $directory 'desktop-local-config.json')
 frontend/dist/
 backend/target/life1000-backend-0.0.1-SNAPSHOT.jar
 desktop/src-tauri/target/release/Life1000.exe
-desktop/src-tauri/target/release/bundle/nsis/Life1000_1.1.0_x64-setup.exe
+desktop/src-tauri/target/release/bundle/nsis/Life1000_1.2.0_x64-setup.exe
 ```
 
 推荐运行 NSIS 安装包。安装后的 exe 旁边有 `backend/life1000-backend.jar`，由安装器一并安装；不能只复制裸 exe 而遗漏 jar。前端资源已嵌入 exe。构建目录中的 exe 同样依赖同目录的 backend 资源。更新后端必须重新构建安装包。
