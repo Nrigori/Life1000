@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6X8AAAAASUVORK5CYII=', 'base64')
 const markdown = '# 我的记录\n\n一段 **粗体** 和 *斜体*。\n\n> 引用\n\n- 第一项\n- 第二项\n\n\x60\x60\x60js\nconst hello = 1\n\x60\x60\x60\n\n---\n\n<script>window.previewAttacked=true</script>\n<img src="https://preview.invalid/track" onerror="window.previewAttacked=true"><a href="javascript:window.previewAttacked=true">恶意链接</a><svg onload="window.previewAttacked=true"></svg>'
-async function setup(page: Page) {
+async function setup(page: Page, many=false) {
   await page.addInitScript(() => {
     sessionStorage.setItem('life1000.accessToken', 'preview-token')
     const create = URL.createObjectURL.bind(URL)
@@ -23,11 +23,21 @@ async function setup(page: Page) {
     { id:9, name:'fourth.png', image:true, stage:'GENERAL', recordId:null },
   ].map(file => ({ id:file.id, originalName:file.name, mimeType:file.image?'image/png':'application/octet-stream',
     isImage:file.image, fileSize:30, recordId:file.recordId, stage:file.stage, allowHomeBackground:false }))
+  if(many) {
+    for(let id=10;id<=19;id++) files.push({id,originalName:'bulk-image-'+id+'.png',mimeType:'image/png',isImage:true,fileSize:30,recordId:null,stage:'GENERAL',allowHomeBackground:false})
+    for(let id=20;id<=33;id++) files.push({id,originalName:'bulk-file-'+id+'.zip',mimeType:'application/zip',isImage:false,fileSize:30,recordId:null,stage:'GENERAL',allowHomeBackground:false})
+  }
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname
+    const method = route.request().method()
     if (!path.startsWith('/api/')) { await route.fallback(); return }
     expect(route.request().headers().authorization).toBe('Bearer preview-token')
-    if (/\/attachments\/\d+\/content$/.test(path)) {
+    if (/^\/api\/attachments\/\d+$/.test(path) && method === 'DELETE') {
+      const id=Number(path.split('/').at(-1))
+      const index=files.findIndex(file=>file.id===id)
+      if(index>=0)files.splice(index,1)
+      await route.fulfill({status:204})
+    } else if (/\/attachments\/\d+\/content$/.test(path)) {
       const id=Number(path.split('/')[3])
       const file=files.find(value=>value.id===id)!
       await route.fulfill({body:file.isImage?png:id===1?markdown:id===3?'%PDF-1.4\n%%EOF':'第一行\n第二行 <script>只作为文本</script>',contentType:file.isImage?'image/png':id===3?'application/pdf':'text/plain'})
@@ -39,8 +49,37 @@ async function setup(page: Page) {
     else await route.fulfill({json:[]})
   })
   await page.goto('/goals/27')
-  await expect(page.locator('.attachment-card')).toHaveCount(9)
+  await expect(page.locator('.attachment-card')).toHaveCount(many ? 30 : 9)
 }
+test('attachment browser separates files, searches names and only renders the current image/file pages',async({page})=>{
+  await setup(page,true)
+  await expect(page.getByRole('button',{name:'全部 33'})).toBeVisible()
+  await expect(page.getByRole('button',{name:'图片 14'})).toBeVisible()
+  await expect(page.getByRole('button',{name:'文件 19'})).toBeVisible()
+  await expect(page.locator('.attachment-image-grid .attachment-card')).toHaveCount(12)
+  await expect(page.locator('.attachment-file-list .attachment-card')).toHaveCount(18)
+  await page.getByRole('navigation',{name:'图片附件分页'}).getByRole('button',{name:'下一页'}).click()
+  await expect(page.locator('[data-attachment="18"]')).toBeVisible()
+  await expect(page.locator('[data-attachment="4"]')).toHaveCount(0)
+  await page.getByPlaceholder('搜索附件……').fill('bulk-file-33')
+  await expect(page.locator('.attachment-card')).toHaveCount(1)
+  await expect(page.locator('[data-attachment="33"]')).toBeVisible()
+  await page.getByPlaceholder('搜索附件……').fill('')
+  await page.getByRole('button',{name:'图片 14'}).click()
+  await expect(page.locator('.attachment-file-list')).toHaveCount(0)
+  await expect(page.locator('.attachment-image-grid .attachment-card')).toHaveCount(12)
+  await page.locator('[data-attachment="4"]').getByRole('button',{name:'预览 photo.png'}).click()
+  await expect(page.locator('.image-viewer')).toContainText('1 / 14')
+  await page.keyboard.press('Escape')
+  await page.getByRole('button',{name:'文件 19'}).click()
+  await page.getByRole('navigation',{name:'文件附件分页'}).getByRole('button',{name:'下一页'}).click()
+  await expect(page.locator('[data-attachment="33"]')).toBeVisible()
+  await page.locator('[data-attachment="33"]').getByRole('button',{name:'删除附件'}).click()
+  await page.getByRole('dialog').getByRole('button',{name:'确认删除'}).click()
+  await expect(page.getByRole('button',{name:'文件 18'})).toBeVisible()
+  await expect(page.getByRole('navigation',{name:'文件附件分页'})).toHaveCount(0)
+  await expect(page.locator('.attachment-file-list .attachment-card')).toHaveCount(18)
+})
 test('Markdown renders common syntax and strips executable HTML and external resources', async ({page}) => {
   await setup(page)
   let external = false

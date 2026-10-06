@@ -6,6 +6,8 @@ import { write,fileSize } from '../api/details'
 import { errorMessage } from '../api/http'
 import { formatSlot } from '../goals/slots'
 import AttachmentImage from '../components/AttachmentImage.vue'
+import BackgroundCandidateDialog from '../components/BackgroundCandidateDialog.vue'
+import FixedBackgroundDialog from '../components/FixedBackgroundDialog.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 const settings=ref<Settings>()
 const images=ref<BackgroundImage[]>([])
@@ -14,10 +16,11 @@ const loading=ref(true),busy=ref(false),exporting=ref(false)
 const error=ref(''),formError=ref(''),notice=ref('')
 const form=ref<{id?:number;name:string;sortOrder:number}>()
 const deleting=ref<Category>()
-const visible=ref(12)
+const candidateDialog=ref(false),fixedDialog=ref(false)
 const controller=new AbortController()
 const exportController=new AbortController()
 const fixed=computed(()=>settings.value?.fixedImage)
+const enabledCandidates=computed(()=>images.value.filter(image=>image.allowHomeBackground).length)
 async function load() {
   if(busy.value) return
   loading.value=true;error.value=''
@@ -28,10 +31,10 @@ async function load() {
   finally {loading.value=false}
 }
 async function change(values:Record<string,string|null>) {
-  if(busy.value) return
+  if(busy.value) return false
   busy.value=true;error.value='';notice.value=''
-  try {settings.value=await updateSettings(values);notice.value='已保存。'}
-  catch(cause){error.value=errorMessage(cause)}
+  try {settings.value=await updateSettings(values);notice.value='已保存。';return true}
+  catch(cause){error.value=errorMessage(cause);return false}
   finally{busy.value=false}
 }
 // 控件以服务端确认的设置为准，保存失败时恢复已持久化选项，避免 UI 显示未生效的模式。
@@ -48,6 +51,9 @@ async function candidate(image:BackgroundImage,event:Event) {
   try {await write('/attachments/'+image.attachmentId+'/home-background','PUT',{allowed:input.checked});image.allowHomeBackground=input.checked}
   catch(cause){input.checked=image.allowHomeBackground;error.value=errorMessage(cause)}
   finally{busy.value=false}
+}
+async function selectFixed(image:BackgroundImage) {
+  if(await change({HOME_FIXED_BACKGROUND_PATH:image.filePath})) fixedDialog.value=false
 }
 function edit(value?:Category) {
   formError.value=''
@@ -98,23 +104,22 @@ onBeforeUnmount(()=>{controller.abort();exportController.abort()})
           <label><input type="radio" name="background-mode" :checked="settings.mode==='FIXED'" value="FIXED" @change="mode($event,'FIXED')" />固定背景</label>
         </fieldset>
         <p class="quiet">每次进入首页重新选择，不自动轮播。固定背景从已有图片中选择。</p>
-        <div v-if="fixed" class="fixed-preview">
-          <AttachmentImage :id="fixed.attachmentId" :alt="'当前固定背景：'+fixed.originalName" />
-          <p>当前固定背景<br /><strong>{{fixed.originalName}}</strong><br />第 {{formatSlot(fixed.slotNo)}} 件</p>
+        <div class="background-summary">
+          <div>
+            <h3>随机背景候选</h3>
+            <p class="quiet">{{images.length ? '已启用 '+enabledCandidates+' 张图片' : '还没有图片。可以先在人生事项中留下影像。'}}</p>
+            <button :disabled="busy||loading||!images.length" @click="candidateDialog=true">管理候选图片</button>
+          </div>
+          <div>
+            <h3>固定首页背景</h3>
+            <div v-if="fixed" class="fixed-preview">
+              <AttachmentImage :id="fixed.attachmentId" :alt="'当前固定背景：'+fixed.originalName" />
+              <p><strong>{{fixed.originalName}}</strong><br />第 {{formatSlot(fixed.slotNo)}} 件</p>
+            </div>
+            <p v-else class="quiet">当前未选择固定背景。</p>
+            <button :disabled="busy||loading||!images.length" @click="fixedDialog=true">选择固定背景</button>
+          </div>
         </div>
-        <p v-else class="quiet">固定背景未选择或已经失效；固定模式下将使用纸张默认背景。</p>
-        <h3>随机背景候选</h3>
-        <p v-if="!images.length" class="quiet">还没有图片。可以先在人生事项中留下影像。</p>
-        <div class="background-grid">
-          <article v-for="image in images.slice(0,visible)" :key="image.attachmentId" class="background-candidate" :data-image="image.attachmentId">
-            <div class="candidate-preview"><AttachmentImage :id="image.attachmentId" :alt="image.originalName" /></div>
-            <p class="candidate-name">{{image.originalName}}</p>
-            <RouterLink :to="'/goals/'+image.slotNo">第 {{formatSlot(image.slotNo)}} 件</RouterLink>
-            <label><input type="checkbox" :checked="image.allowHomeBackground" :disabled="busy||loading" @change="candidate(image,$event)" />允许作为首页背景</label>
-            <button :disabled="busy||loading||fixed?.attachmentId===image.attachmentId" @click="change({HOME_FIXED_BACKGROUND_PATH:image.filePath})">{{fixed?.attachmentId===image.attachmentId?'已选为固定背景':'设为固定首页背景'}}</button>
-          </article>
-        </div>
-        <button v-if="visible<images.length" class="more-images" @click="visible+=12">继续查看图片（{{visible}} / {{images.length}}）</button>
       </section>
       <section class="paper settings-section" aria-labelledby="category-settings-title">
         <div class="settings-heading"><h2 id="category-settings-title">分类</h2><button :disabled="busy||loading" @click="edit()">＋ 新增分类</button></div>
@@ -143,6 +148,8 @@ onBeforeUnmount(()=>{controller.abort();exportController.abort()})
         <p class="quiet">按已保存的附件信息统计。</p>
       </section>
     </template>
+    <BackgroundCandidateDialog v-if="candidateDialog" :images="images" :busy="busy" @toggle="candidate" @close="candidateDialog=false" />
+    <FixedBackgroundDialog v-if="fixedDialog" :images="images" :busy="busy" :selected-id="fixed?.attachmentId" @confirm="selectFixed" @close="fixedDialog=false" />
     <ModalDialog v-if="form" :title="form.id?'编辑分类':'新增分类'" :busy="busy" @close="form=undefined">
       <form class="entry-form" @submit.prevent="saveCategory">
         <label>名称<input v-model="form.name" required maxlength="100" autofocus :disabled="busy" /></label>
@@ -169,23 +176,16 @@ h3{font-size:16px;font-weight:400;margin:28px 0 16px}
 legend{margin-bottom:16px;font-size:14px}
 label{font-size:13px}
 input[type=radio],input[type=checkbox]{width:auto;margin-right:8px;accent-color:var(--accent)}
-.fixed-preview{display:flex;align-items:center;gap:24px;font-size:13px;line-height:1.9;margin-top:20px}
-.fixed-preview img{width:160px;height:90px;object-fit:cover;border-radius:4px}
+.background-summary{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:24px}.background-summary>div{min-width:0;padding:18px;border:1px solid #e1d6c8;border-radius:4px;background:rgba(249,244,235,.52)}.background-summary h3{margin:0 0 12px}.background-summary button{margin-top:10px}
+.fixed-preview{display:flex;align-items:center;gap:16px;font-size:13px;line-height:1.9;margin:10px 0}
+.fixed-preview img{width:120px;height:68px;object-fit:cover;border-radius:4px}
 .fixed-preview p{overflow-wrap:anywhere;min-width:0}.fixed-preview strong{font-weight:400}
-.background-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
-.background-candidate{min-width:0;display:flex;flex-direction:column;gap:12px}
-.candidate-preview{height:145px;background:#e9decd;display:grid;place-items:center;border-radius:4px;overflow:hidden;font-size:12px;color:var(--muted)}
-.candidate-preview img{width:100%;height:100%;object-fit:cover}
-.candidate-name{margin:0;overflow-wrap:anywhere;font-size:14px}
-.background-candidate a{font-size:12px;color:var(--muted)}.background-candidate a:hover{text-decoration:underline}
-.background-candidate button{font-size:12px;margin-top:auto}
-.more-images{display:block;margin:26px auto 0}
 .category-list{list-style:none;padding:0;margin:0}
 .category-list li{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 0;border-bottom:1px solid var(--line)}
 .category-list span{overflow-wrap:anywhere;min-width:0}.category-list small{display:block;color:var(--muted);font-size:12px;margin-top:6px}
 .category-list li>div{display:flex;flex-shrink:0;gap:8px}
 .category-list button{font-size:13px;padding:7px 12px}
 .file-usage{display:flex;gap:70px}.file-usage div{display:grid;gap:12px}.file-usage dt{color:var(--muted);font-size:13px}.file-usage dd{margin:0;font:24px Georgia,serif}
-@media(max-width:800px){.background-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.settings-section{padding:28px 24px}.file-usage{gap:30px}}
-@media(max-width:460px){.background-grid{grid-template-columns:1fr}.fixed-preview{align-items:flex-start;flex-direction:column}.file-usage{flex-wrap:wrap}}
+@media(max-width:800px){.background-summary{grid-template-columns:1fr}.settings-section{padding:28px 24px}.file-usage{gap:30px}}
+@media(max-width:460px){.fixed-preview{align-items:flex-start;flex-direction:column}.file-usage{flex-wrap:wrap}}
 </style>

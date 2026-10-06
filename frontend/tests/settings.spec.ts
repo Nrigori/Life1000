@@ -2,12 +2,18 @@ import { test,expect,type Page } from '@playwright/test'
 import type { Settings,BackgroundImage } from '../src/api/settings'
 import type { Category } from '../src/api/goals'
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6X8AAAAASUVORK5CYII=','base64')
-async function mock(page:Page,empty=false) {
-  const images:BackgroundImage[]=empty?[]:[1,2,3].map(id=>({attachmentId:id,slotNo:id===3?47:27,originalName:'影像 '+id+'.png',filePath:'goals/027/'+id,allowHomeBackground:id===1,fixed:false}))
+async function mock(page:Page,empty=false,imageCount=3) {
+  const images:BackgroundImage[]=empty?[]:Array.from({length:imageCount},(_,index)=>index+1).map(id=>({attachmentId:id,slotNo:id===3?47:27,originalName:'影像 '+id+'.png',filePath:'goals/027/'+id,allowHomeBackground:id===1,fixed:false}))
   let categories:Category[]=empty?[]:[{id:1,name:'旅行',sortOrder:0},{id:2,name:'阅读',sortOrder:0}]
   const settings:Settings={mode:'RANDOM',fixedPath:null,fixedImage:null,files:{imageCount:images.length,documentCount:2,totalBytes:1471026298}}
   const calls:string[]=[]
-  await page.addInitScript(()=>sessionStorage.setItem('life1000.accessToken','phase6-token'))
+  await page.addInitScript(()=>{
+    sessionStorage.setItem('life1000.accessToken','phase6-token')
+    const create=URL.createObjectURL.bind(URL),revoke=URL.revokeObjectURL.bind(URL)
+    ;(window as any).created=[];(window as any).revoked=[]
+    URL.createObjectURL=blob=>{const url=create(blob);(window as any).created.push(url);return url}
+    URL.revokeObjectURL=url=>{(window as any).revoked.push(url);revoke(url)}
+  })
   await page.route('**/api/**',async route=>{
     const req=route.request(),url=new URL(req.url()),path=url.pathname,method=req.method()
     if(!path.startsWith('/api/')){await route.fallback();return}
@@ -44,21 +50,50 @@ test('settings persist modes, fixed image, candidates and home reads authenticat
   const fixture=await mock(page)
   await page.goto('/settings')
   await expect(page.getByRole('radio',{name:'随机背景',exact:true})).toBeChecked()
+  await expect(page.getByText('已启用 1 张图片')).toBeVisible()
+  await page.getByRole('button',{name:'管理候选图片'}).click()
+  const candidateDialog=page.getByRole('dialog')
   const first=page.locator('[data-image="1"]')
   await first.getByLabel('允许作为首页背景').uncheck()
   await expect.poll(()=>fixture.images[0]!.allowHomeBackground).toBe(false)
-  await first.getByRole('button',{name:'设为固定首页背景'}).click()
-  await expect(page.locator('.fixed-preview')).toContainText('影像 1.png')
+  await candidateDialog.getByRole('button',{name:'关闭'}).click()
+  await page.getByRole('button',{name:'选择固定背景'}).click()
+  const fixedDialog=page.getByRole('dialog')
+  await fixedDialog.locator('[data-image="2"]').click()
+  await fixedDialog.getByRole('button',{name:'确认选择'}).click()
+  await expect(page.locator('.fixed-preview')).toContainText('影像 2.png')
   await page.getByRole('radio',{name:'固定背景',exact:true}).check()
   await expect.poll(()=>fixture.settings.mode).toBe('FIXED')
   await page.reload()
   await expect(page.getByRole('radio',{name:'固定背景',exact:true})).toBeChecked()
+  await page.getByRole('button',{name:'管理候选图片'}).click()
   await expect(first.getByLabel('允许作为首页背景')).not.toBeChecked()
+  await page.getByRole('dialog').getByRole('button',{name:'关闭'}).click()
   await page.getByRole('link',{name:'Life1000 首页',exact:true}).click()
   await expect(page.locator('.home-photo')).toHaveAttribute('src',/^blob:/)
   await page.getByRole('link',{name:'设置',exact:true}).click()
   await page.getByRole('radio',{name:'随机背景',exact:true}).check()
   await expect.poll(()=>fixture.settings.mode).toBe('RANDOM')
+})
+test('background libraries use true pagination, filename search and release page Blob URLs',async({page})=>{
+  const fixture=await mock(page,false,25)
+  await page.goto('/settings')
+  await expect(page.locator('.fixed-preview')).toHaveCount(0)
+  await page.getByRole('button',{name:'管理候选图片'}).click()
+  const dialog=page.getByRole('dialog')
+  await expect(dialog.locator('.library-card img')).toHaveCount(12)
+  expect(fixture.calls.filter(call=>call.includes('/api/attachments/')&&call.endsWith('/content')).length).toBe(12)
+  const firstPageUrls=await page.evaluate(()=>(window as any).created.slice() as string[])
+  await dialog.getByRole('button',{name:'下一页'}).click()
+  await expect(dialog.locator('[data-image="13"]')).toBeVisible()
+  await expect(dialog.locator('[data-image="1"]')).toHaveCount(0)
+  await expect(dialog.locator('.library-card img')).toHaveCount(12)
+  await expect.poll(()=>page.evaluate(urls=>urls.every(url=>(window as any).revoked.includes(url)),firstPageUrls)).toBe(true)
+  await dialog.getByPlaceholder('搜索图片……').fill('影像 25')
+  await expect(dialog.locator('.library-card')).toHaveCount(1)
+  await expect(dialog.locator('[data-image="25"]')).toBeVisible()
+  await dialog.getByRole('button',{name:'关闭'}).click()
+  await expect.poll(()=>page.evaluate(()=>(window as any).created.every((url:string)=>(window as any).revoked.includes(url)))).toBe(true)
 })
 test('category CRUD stable order, confirm cancel and escaped modal',async({page})=>{
   await mock(page)
@@ -125,7 +160,7 @@ test('empty settings, loading and failed mutations preserve visible state and in
   await page.goto('/settings')
   await expect(page.getByText('还没有图片。可以先在人生事项中留下影像。')).toBeVisible()
   await expect(page.getByText('还没有分类。事项也可以保持“不分类”。')).toBeVisible()
-  await expect(page.getByText('固定背景未选择或已经失效；固定模式下将使用纸张默认背景。')).toBeVisible()
+  await expect(page.getByText('当前未选择固定背景。')).toBeVisible()
 })
 
 

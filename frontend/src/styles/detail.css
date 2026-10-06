@@ -17,7 +17,7 @@
 .check-list, .record-list { list-style: none; padding: 0; }
 .check-list li { display: flex; gap: 20px; align-items: center; justify-content: space-between; padding: 9px 0; }
 .check-content { display: flex; align-items: baseline; gap: 12px; overflow-wrap: anywhere; min-width: 0; }
-.check-content input, .background-option input { width: auto; accent-color: #806344; }
+.check-content input { width: auto; accent-color: #806344; }
 .checked { color: #9a8a77; text-decoration: line-through; }
 .row-actions { flex-shrink: 0; gap: 8px; }
 .row-actions button { font-size: 12px; padding: 4px 8px; background: transparent; }
@@ -39,20 +39,12 @@
 .file-drop-overlay span { font-size: 30px; color: #9a8163; }
 .file-drop-overlay strong { font: 20px/1.5 Georgia, "Songti SC", "SimSun", serif; font-weight: 400; }
 .file-drop-overlay small { color: var(--muted); }
-.attachment-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 22px; }
-.attachment-card { border: 1px solid #e0d5c6; padding: 14px; border-radius: 4px; min-width: 0; }
-.attachment-card h3 { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; margin: 12px 0 6px; }
-.attachment-card > button { margin-top: 12px; font-size: 12px; }
-.attachment-thumb { display: block; width: 100%; height: 130px; overflow: hidden; padding: 0; }
-.attachment-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.document-symbol { height: 130px; display: grid; place-items: center; background: #eee7dc; color: #a58e72; font-size: 40px; }
-.background-option { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-top: 14px; }
 .image-dialog { width: min(1000px, calc(100vw - 32px)); }
 .image-dialog > img { display: block; max-width: 100%; max-height: 70vh; object-fit: contain; margin: auto; }
-@media (max-width: 800px) { .goal-detail { padding: 24px; } .attachment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 800px) { .goal-detail { padding: 24px; } }
 @media (max-width: 540px) {
   .goal-detail { padding: 18px; } .detail-heading { margin-top: 28px; } .detail-banner { height: 210px; }
-  .edit-columns, .attachment-grid { grid-template-columns: 1fr; } .check-list li { align-items: flex-start; }
+  .edit-columns { grid-template-columns: 1fr; } .check-list li { align-items: flex-start; }
 }
 
 .completion-entry { text-align: center; padding-top: 34px; }

@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getGoal, getCategories, deleteGoal, statusLabels, type LifeGoal, type Category } from '../api/goals'
 import { errorMessage } from '../api/http'
-import { readChecks, readRecords, readAttachments, readCover, write, upload, downloadFile, fileSize,
+import { readChecks, readRecords, readAttachments, readCover, write, upload, downloadFile,
   type CheckItem, type GoalRecord, type Attachment } from '../api/details'
 import { formatSlot } from '../goals/slots'
 import { readCompletion, undoCompletion, type Completion } from '../api/completion'
@@ -11,6 +11,7 @@ import CompletionDialog from '../components/CompletionDialog.vue'
 import CompletionFeedback from '../components/CompletionFeedback.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import AttachmentImage from '../components/AttachmentImage.vue'
+import AttachmentBrowser from '../components/AttachmentBrowser.vue'
 import AttachmentPreviewDialog from '../components/AttachmentPreviewDialog.vue'
 import { previewKind } from '../attachments/preview'
 import '../styles/detail.css'
@@ -263,6 +264,12 @@ function setBackground(file: Attachment, event: Event) {
     await write(`/attachments/${file.id}/home-background`, 'PUT', { allowed: !file.allowHomeBackground }); await refresh()
   }).finally(() => { input.checked = attachments.value.find(value => value.id === file.id)?.allowHomeBackground ?? file.allowHomeBackground })
 }
+function downloadAttachment(file: Attachment) {
+  void run(() => downloadFile(file))
+}
+function removeAttachment(file: Attachment) {
+  confirmDelete('删除附件？', file.originalName + ' 将从记录册与磁盘中删除。', '/attachments/' + file.id)
+}
 watch(() => route.params.slotNo, load, { immediate: true })
 onMounted(() => {
   document.addEventListener('dragenter', dragEnter)
@@ -360,19 +367,9 @@ onBeforeUnmount(() => {
         <p v-if="uploadProgress" class="upload-status" role="status">正在上传 {{ uploadProgress.current }} / {{ uploadProgress.total }}</p>
         <p v-else-if="uploadResult" class="upload-status" :class="{ 'has-failures': uploadHasFailures }" :role="uploadHasFailures ? 'alert' : 'status'">{{ uploadResult }}</p>
         <p v-else-if="busy" role="status">正在保存，请稍候…</p>
-        <div class="attachment-grid">
-          <article v-for="file in attachments" :key="file.id" class="attachment-card" :data-attachment="file.id">
-            <button v-if="file.isImage" class="attachment-thumb" :aria-label="'预览 ' + file.originalName" @click="preview = file"><AttachmentImage :id="file.id" :alt="file.originalName" /></button>
-            <div v-else class="document-symbol" aria-hidden="true">▤</div>
-            <h3>{{ file.originalName }}</h3>
-            <p class="quiet">{{ file.originalName.split('.').pop()?.toUpperCase() }} · {{ fileSize(file.fileSize) }} · {{ file.stage === 'PROCESS' ? '过程记录' : file.stage === 'COMPLETION' ? '完成证明' : '事项附件' }}</p>
-            <div class="row-actions"><button v-if="previewKind(file)" :disabled="busy" @click="preview = file">预览</button><button :disabled="busy" @click="run(() => downloadFile(file))">下载</button><button :disabled="busy" @click="confirmDelete('删除附件？', file.originalName + ' 将从记录册与磁盘中删除。', '/attachments/' + file.id)">删除附件</button></div>
-            <template v-if="file.isImage">
-              <button :disabled="busy || goal.coverAttachmentId === file.id" @click="setCover(file)">{{ goal.coverAttachmentId === file.id ? '已选为封面' : '设为封面' }}</button>
-              <label class="background-option"><input type="checkbox" :checked="file.allowHomeBackground" :disabled="busy" @change="setBackground(file, $event)" />允许作为首页背景</label>
-            </template>
-          </article>
-        </div>
+        <AttachmentBrowser :attachments="attachments" :busy="busy" :cover-id="goal.coverAttachmentId ?? undefined"
+          @preview="preview = $event" @download="downloadAttachment" @remove="removeAttachment"
+          @set-cover="setCover" @toggle-background="setBackground" />
       </section>
       <section v-if="goal.status === 'COMPLETED'" class="detail-section completion-section">
         <div class="section-heading"><h2>完成之后</h2><button :disabled="busy" @click="completionOpen = true">编辑完成档案</button></div>

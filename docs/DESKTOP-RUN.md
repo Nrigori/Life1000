@@ -2,6 +2,14 @@
 
 桌面版是现有 V1 的新入口：Tauri 2 / WebView2 内嵌 Vue production build，启动自己管理的 Spring Boot jar，再连接原有 MySQL 和本地附件目录。没有 Nginx、Vite 开发服务器或外部浏览器，也没有新业务表、接口或附件存储格式。Web 版的三个 local 脚本保持可用。
 
+## Desktop 1.2.1 内容收纳
+
+事项详情按“全部 / 图片 / 文件”整理附件：图片以每页 12 张的缩略图浏览，其他文件以每页 18 条的紧凑档案列表浏览，并可按当前事项的附件文件名搜索。图片查看器、预览、下载、删除、封面和首页背景候选等既有权限与业务语义保持不变。
+
+设置页只显示随机候选数量和当前固定背景；随机候选管理与固定背景选择分别进入每页 12 张的图库。图库只挂载当前页图片并在翻页或关闭时释放 Blob URL。随机候选仍使用 `allow_home_background`，固定背景仍从全部有效图片中独立选择。
+
+Desktop 1.2.1 保持 `productName = Life1000` 与 `identifier = com.life1000.desktop`，可在保留桌面私有配置、窗口状态、MySQL 数据和附件目录的情况下覆盖升级 1.2.0。
+
 ## Desktop 1.2 日常体验
 
 Desktop 1.2 增加未开始与进行中的快捷切换、事项详情文件拖拽上传，以及支持前后切换、缩放、拖动、适应窗口和原始大小的轻量图片查看器。完成状态仍只通过完成流程修改，拖入文件仍使用原有 GENERAL 附件接口，图片仍通过带 JWT 的 content API 读取。
@@ -92,7 +100,7 @@ notepad (Join-Path $directory 'desktop-local-config.json')
 frontend/dist/
 backend/target/life1000-backend-0.0.1-SNAPSHOT.jar
 desktop/src-tauri/target/release/Life1000.exe
-desktop/src-tauri/target/release/bundle/nsis/Life1000_1.2.0_x64-setup.exe
+desktop/src-tauri/target/release/bundle/nsis/Life1000_1.2.1_x64-setup.exe
 ```
 
 推荐运行 NSIS 安装包。安装后的 exe 旁边有 `backend/life1000-backend.jar`，由安装器一并安装；不能只复制裸 exe 而遗漏 jar。前端资源已嵌入 exe。构建目录中的 exe 同样依赖同目录的 backend 资源。更新后端必须重新构建安装包。
